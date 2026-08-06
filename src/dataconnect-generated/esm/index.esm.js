@@ -1,25 +1,20 @@
-import { queryRef, executeQuery, validateArgsWithOptions, validateArgs, makeMemoryCacheProvider } from 'firebase/data-connect';
+import { queryRef, executeQuery, validateArgsWithOptions, validateArgs } from 'firebase/data-connect';
 
 export const connectorConfig = {
-  connector: 'example',
-  service: 'torqueflow-connector',
+  connector: 'torqueflow-connector',
+  service: 'torqueflow-service',
   location: 'southamerica-east1'
 };
-export const dataConnectSettings = {
-  cacheSettings: {
-    cacheProvider: makeMemoryCacheProvider()
-  }
-};
-export const getUsersDropdownRef = (dc) => {
+export const listClientsRef = (dc) => {
   const { dc: dcInstance} = validateArgs(connectorConfig, dc, undefined);
   dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'GetUsersDropdown');
+  return queryRef(dcInstance, 'ListClients');
 }
-getUsersDropdownRef.operationName = 'GetUsersDropdown';
+listClientsRef.operationName = 'ListClients';
 
-export function getUsersDropdown(dcOrOptions, options) {
+export function listClients(dcOrOptions, options) {
   
   const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrOptions, options, undefined,false, false);
-  return executeQuery(getUsersDropdownRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+  return executeQuery(listClientsRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
 }
 

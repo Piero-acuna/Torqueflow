@@ -20,23 +20,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </QueryClientProvider>
   </React.StrictMode>,
 );
-
-import { useListClients } from "@dataconnect/generated/react";
-
-export default function ClientsCatalog() {
-  const { data, isLoading, error } = useListClients();
-
-  if (isLoading) return <p>Cargando clientes...</p>;
-  if (error) return <p>No se pudieron cargar los clientes.</p>;
-
-  return (
-    <div>
-      {data?.clients?.map((client) => (
-        <article key={client.id}>
-          <strong>{client.name}</strong>
-          <span>{client.phone || "Sin teléfono"}</span>
-        </article>
-      ))}
-    </div>
-  );
-}

@@ -1,13 +1,14 @@
 specVersion: "v1"
-serviceId: "torqueflow-connector"
+serviceId: "torqueflow-service"
 location: "southamerica-east1"
+
 schema:
   source: "./schema"
   datasource:
-      postgresql:
-        database: "torqueflow"
-        cloudSql:
-          instanceId: "torqueflow-service"
-          # schemaValidation: "STRICT"     # STRICT mode makes Postgres schema match Data Connect exactly.
-          # schemaValidation: "COMPATIBLE" # COMPATIBLE mode makes Postgres schema compatible with Data Connect.
-connectorDirs: ["./example"]
+    postgresql:
+      database: "torqueflow"
+      cloudSql:
+        instanceId: "torqueflow-service"
+
+connectorDirs:
+  - "./torqueflow-connector"

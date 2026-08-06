@@ -1,7 +1,6 @@
-import { ConnectorConfig, DataConnect, QueryRef, QueryPromise, ExecuteQueryOptions, DataConnectSettings } from 'firebase/data-connect';
+import { ConnectorConfig, DataConnect, QueryRef, QueryPromise, ExecuteQueryOptions } from 'firebase/data-connect';
 
 export const connectorConfig: ConnectorConfig;
-export const dataConnectSettings: DataConnectSettings;
 
 export type TimestampString = string;
 export type UUIDString = string;
@@ -21,11 +20,11 @@ export interface ExternalJob_Key {
   __typename?: 'ExternalJob_Key';
 }
 
-export interface GetUsersDropdownData {
-  userProfiles: ({
-    id: string;
+export interface ListClientsData {
+  clients: ({
+    id: UUIDString;
     name: string;
-  } & UserProfile_Key)[];
+  } & Client_Key)[];
 }
 
 export interface Mechanic_Key {
@@ -78,15 +77,15 @@ export interface WorkshopService_Key {
   __typename?: 'WorkshopService_Key';
 }
 
-interface GetUsersDropdownRef {
+interface ListClientsRef {
   /* Allow users to create refs without passing in DataConnect */
-  (): QueryRef<GetUsersDropdownData, undefined>;
+  (): QueryRef<ListClientsData, undefined>;
   /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect): QueryRef<GetUsersDropdownData, undefined>;
+  (dc: DataConnect): QueryRef<ListClientsData, undefined>;
   operationName: string;
 }
-export const getUsersDropdownRef: GetUsersDropdownRef;
+export const listClientsRef: ListClientsRef;
 
-export function getUsersDropdown(options?: ExecuteQueryOptions): QueryPromise<GetUsersDropdownData, undefined>;
-export function getUsersDropdown(dc: DataConnect, options?: ExecuteQueryOptions): QueryPromise<GetUsersDropdownData, undefined>;
+export function listClients(options?: ExecuteQueryOptions): QueryPromise<ListClientsData, undefined>;
+export function listClients(dc: DataConnect, options?: ExecuteQueryOptions): QueryPromise<ListClientsData, undefined>;
 

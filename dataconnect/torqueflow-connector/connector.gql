@@ -1,0 +1,6 @@
+query ListClients @auth(level: USER) {
+  clients {
+    id
+    name
+  }
+}

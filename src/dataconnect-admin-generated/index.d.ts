@@ -18,11 +18,11 @@ export interface ExternalJob_Key {
   __typename?: 'ExternalJob_Key';
 }
 
-export interface GetUsersDropdownData {
-  userProfiles: ({
-    id: string;
+export interface ListClientsData {
+  clients: ({
+    id: UUIDString;
     name: string;
-  } & UserProfile_Key)[];
+  } & Client_Key)[];
 }
 
 export interface Mechanic_Key {
@@ -75,8 +75,8 @@ export interface WorkshopService_Key {
   __typename?: 'WorkshopService_Key';
 }
 
-/** Generated Node Admin SDK operation action function for the 'GetUsersDropdown' Query. Allow users to execute without passing in DataConnect. */
-export function getUsersDropdown(dc: DataConnect, options?: OperationOptions): Promise<ExecuteOperationResponse<GetUsersDropdownData>>;
-/** Generated Node Admin SDK operation action function for the 'GetUsersDropdown' Query. Allow users to pass in custom DataConnect instances. */
-export function getUsersDropdown(options?: OperationOptions): Promise<ExecuteOperationResponse<GetUsersDropdownData>>;
+/** Generated Node Admin SDK operation action function for the 'ListClients' Query. Allow users to execute without passing in DataConnect. */
+export function listClients(dc: DataConnect, options?: OperationOptions): Promise<ExecuteOperationResponse<ListClientsData>>;
+/** Generated Node Admin SDK operation action function for the 'ListClients' Query. Allow users to pass in custom DataConnect instances. */
+export function listClients(options?: OperationOptions): Promise<ExecuteOperationResponse<ListClientsData>>;
 
