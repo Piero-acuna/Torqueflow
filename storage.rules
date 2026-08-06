@@ -1,0 +1,26 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function member(workshopId) {
+      return firestore.get(/databases/(default)/documents/workshops/$(workshopId)/members/$(request.auth.uid)).data;
+    }
+
+    function activeStaff(workshopId) {
+      return signedIn()
+        && firestore.exists(/databases/(default)/documents/workshops/$(workshopId)/members/$(request.auth.uid))
+        && member(workshopId).active == true
+        && member(workshopId).role in ['admin', 'advisor', 'mechanic'];
+    }
+
+    match /workshops/{workshopId}/orders/{orderId}/receipts/{fileName} {
+      allow read: if activeStaff(workshopId);
+      allow write: if activeStaff(workshopId)
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+  }
+}

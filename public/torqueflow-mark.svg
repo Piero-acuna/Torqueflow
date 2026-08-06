@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">TorqueFlow</title>
+  <desc id="desc">Símbolo industrial con engranaje y llave mecánica.</desc>
+  <defs>
+    <linearGradient id="torqueGradient" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffb020"/>
+      <stop offset="0.52" stop-color="#ff7a00"/>
+      <stop offset="1" stop-color="#1687ff"/>
+    </linearGradient>
+    <filter id="torqueShadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="#0b1220"/>
+  <g filter="url(#torqueShadow)">
+    <g fill="url(#torqueGradient)">
+      <rect x="28" y="5" width="8" height="11" rx="2"/>
+      <rect x="28" y="48" width="8" height="11" rx="2"/>
+      <rect x="48" y="28" width="11" height="8" rx="2"/>
+      <rect x="5" y="28" width="11" height="8" rx="2"/>
+      <rect x="43.6" y="9.4" width="8" height="11" rx="2" transform="rotate(45 47.6 14.9)"/>
+      <rect x="12.4" y="40.6" width="8" height="11" rx="2" transform="rotate(45 16.4 46.1)"/>
+      <rect x="43.6" y="40.6" width="8" height="11" rx="2" transform="rotate(135 47.6 46.1)"/>
+      <rect x="12.4" y="9.4" width="8" height="11" rx="2" transform="rotate(135 16.4 14.9)"/>
+      <circle cx="32" cy="32" r="20"/>
+    </g>
+    <circle cx="32" cy="32" r="12.5" fill="#0b1220"/>
+    <path d="M45.9 14.4a10.7 10.7 0 0 0-13.7 13.7L16.7 43.6a5.1 5.1 0 1 0 7.2 7.2l15.5-15.5a10.7 10.7 0 0 0 13.7-13.7l-7 7-5.7-1.5-1.5-5.7 7-7Z" fill="#f8fafc"/>
+    <circle cx="20.4" cy="47.1" r="2.3" fill="#1687ff"/>
+  </g>
+</svg>

@@ -1,0 +1,6 @@
+query GetUsersDropdown @auth(level: USER) {
+  userProfiles {
+    id
+    name
+  }
+}

@@ -1,0 +1,114 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function memberPath(workshopId) {
+      return /databases/$(database)/documents/workshops/$(workshopId)/members/$(request.auth.uid);
+    }
+
+    function hasMembership(workshopId) {
+      return signedIn() && exists(memberPath(workshopId));
+    }
+
+    function member(workshopId) {
+      return get(memberPath(workshopId)).data;
+    }
+
+    function activeMember(workshopId) {
+      return hasMembership(workshopId) && member(workshopId).active == true;
+    }
+
+    function hasRole(workshopId, roles) {
+      return activeMember(workshopId) && member(workshopId).role in roles;
+    }
+
+    function admin(workshopId) {
+      return hasRole(workshopId, ['admin']);
+    }
+
+    function operator(workshopId) {
+      return hasRole(workshopId, ['admin', 'advisor', 'mechanic']);
+    }
+
+    function staff(workshopId) {
+      return hasRole(workshopId, ['admin', 'advisor', 'mechanic', 'cashier']);
+    }
+
+    match /workshops/{workshopId} {
+      allow read: if activeMember(workshopId);
+      allow create: if admin(workshopId);
+      allow update: if admin(workshopId)
+        || (operator(workshopId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nextOrderNumber', 'updatedAt']));
+      allow delete: if false;
+
+      match /members/{uid} {
+        allow read: if signedIn() && (request.auth.uid == uid || admin(workshopId));
+        allow write: if false;
+      }
+
+      match /clients/{clientId} {
+        allow read: if staff(workshopId);
+        allow create, update: if hasRole(workshopId, ['admin', 'advisor']);
+        allow delete: if admin(workshopId);
+      }
+
+      match /vehicles/{vehicleId} {
+        allow read: if staff(workshopId);
+        allow create, update: if hasRole(workshopId, ['admin', 'advisor']);
+        allow delete: if admin(workshopId);
+      }
+
+      match /mechanics/{mechanicId} {
+        allow read: if staff(workshopId);
+        allow create, update, delete: if admin(workshopId);
+      }
+
+      match /serviceCategories/{categoryId} {
+        allow read: if staff(workshopId);
+        allow create, update, delete: if admin(workshopId);
+      }
+
+      match /services/{serviceId} {
+        allow read: if staff(workshopId);
+        allow create, update, delete: if admin(workshopId);
+      }
+
+      match /orders/{orderId} {
+        allow read: if staff(workshopId);
+        allow create: if operator(workshopId)
+          && request.resource.data.createdBy == request.auth.uid;
+        allow update: if staff(workshopId)
+          && request.resource.data.createdBy == resource.data.createdBy;
+        allow delete: if admin(workshopId);
+      }
+
+      match /parts/{partId} {
+        allow read: if staff(workshopId);
+        allow create: if hasRole(workshopId, ['admin', 'advisor'])
+          && request.resource.data.stock >= 0;
+        allow update: if operator(workshopId)
+          && request.resource.data.stock >= 0;
+        allow delete: if admin(workshopId);
+      }
+
+      match /stockMovements/{movementId} {
+        allow read: if staff(workshopId);
+        allow create: if operator(workshopId)
+          && request.resource.data.actorId == request.auth.uid
+          && request.resource.data.nextStock >= 0;
+        allow update, delete: if false;
+      }
+
+      match /auditLogs/{logId} {
+        allow read: if admin(workshopId);
+        allow create: if activeMember(workshopId)
+          && request.resource.data.actorId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+  }
+}

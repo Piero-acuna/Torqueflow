@@ -1,0 +1,187 @@
+enum UserRole {
+  ADMIN
+  ADVISOR
+  MECHANIC
+  CASHIER
+}
+
+enum OrderStatus {
+  REVIEW
+  WAITING_PARTS
+  EXTERNAL
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+enum OrderPriority {
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+}
+
+enum StockMovementType {
+  PURCHASE
+  ORDER_OUTPUT
+  RETURN
+  POSITIVE_ADJUSTMENT
+  NEGATIVE_ADJUSTMENT
+}
+
+type UserProfile @table {
+  id: String! @default(expr: "auth.uid")
+  name: String!
+  email: String!
+  role: UserRole!
+  active: Boolean! @default(value: true)
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type Client @table {
+  id: UUID! @default(expr: "uuidV4()")
+  documentType: String
+  documentNumber: String
+  name: String!
+  phone: String
+  email: String
+  address: String
+  notes: String
+  active: Boolean! @default(value: true)
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+type Vehicle @table {
+  id: UUID! @default(expr: "uuidV4()")
+  client: Client!
+  plate: String!
+  brand: String!
+  model: String!
+  year: Int
+  color: String
+  mileage: Int
+  fuelType: String
+  vin: String
+  active: Boolean! @default(value: true)
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type Mechanic @table {
+  id: UUID! @default(expr: "uuidV4()")
+  name: String!
+  phone: String
+  specialty: String
+  active: Boolean! @default(value: true)
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type ServiceCategory @table {
+  id: UUID! @default(expr: "uuidV4()")
+  name: String!
+  active: Boolean! @default(value: true)
+}
+
+type WorkshopService @table {
+  id: UUID! @default(expr: "uuidV4()")
+  category: ServiceCategory!
+  name: String!
+  description: String
+  basePrice: Float!
+  estimatedMinutes: Int
+  active: Boolean! @default(value: true)
+}
+
+type WorkOrder @table {
+  id: UUID! @default(expr: "uuidV4()")
+  orderNumber: Int!
+  vehicle: Vehicle!
+  mechanic: Mechanic
+  status: OrderStatus! @default(value: REVIEW)
+  priority: OrderPriority! @default(value: NORMAL)
+  diagnosis: String!
+  customerComplaint: String
+  entryAt: Timestamp! @default(expr: "request.time")
+  estimatedDeliveryAt: Timestamp
+  deliveredAt: Timestamp
+  fuelLevel: Int
+  budgetLimit: Float
+  laborCost: Float! @default(value: 0)
+  externalCost: Float! @default(value: 0)
+  partsCost: Float! @default(value: 0)
+  discount: Float! @default(value: 0)
+  totalCost: Float! @default(value: 0)
+  amountCharged: Float! @default(value: 0)
+  paymentStatus: PaymentStatus! @default(value: PENDING)
+  internalNotes: String
+  createdBy: UserProfile!
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+type OrderService @table {
+  id: UUID! @default(expr: "uuidV4()")
+  order: WorkOrder!
+  service: WorkshopService!
+  quantity: Int! @default(value: 1)
+  unitPrice: Float!
+  subtotal: Float!
+}
+
+type Part @table {
+  id: UUID! @default(expr: "uuidV4()")
+  code: String!
+  name: String!
+  category: String
+  brand: String
+  location: String
+  supplier: String
+  currentStock: Int! @default(value: 0)
+  minimumStock: Int! @default(value: 0)
+  maximumStock: Int
+  averageCost: Float! @default(value: 0)
+  salePrice: Float! @default(value: 0)
+  active: Boolean! @default(value: true)
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type OrderPart @table {
+  id: UUID! @default(expr: "uuidV4()")
+  order: WorkOrder!
+  part: Part!
+  quantity: Int!
+  unitCost: Float!
+  subtotal: Float!
+}
+
+type ExternalJob @table {
+  id: UUID! @default(expr: "uuidV4()")
+  order: WorkOrder!
+  serviceType: String!
+  provider: String!
+  description: String
+  departureAt: Timestamp
+  returnAt: Timestamp
+  cost: Float! @default(value: 0)
+  status: String!
+}
+
+type StockMovement @table {
+  id: UUID! @default(expr: "uuidV4()")
+  part: Part!
+  order: WorkOrder
+  type: StockMovementType!
+  quantity: Int!
+  previousStock: Int!
+  resultingStock: Int!
+  unitCost: Float
+  reference: String
+  notes: String
+  createdBy: UserProfile!
+  createdAt: Timestamp! @default(expr: "request.time")
+}

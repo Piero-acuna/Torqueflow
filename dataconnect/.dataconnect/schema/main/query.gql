@@ -1,0 +1,643 @@
+extend type Query {
+  """
+  ✨ Look up a single `Client` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  client(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Client_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Client_FirstRow
+  ): Client @fdc_generated(from: "Client", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `ExternalJob` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  externalJob(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: ExternalJob_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: ExternalJob_FirstRow
+  ): ExternalJob @fdc_generated(from: "ExternalJob", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Mechanic` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  mechanic(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Mechanic_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Mechanic_FirstRow
+  ): Mechanic @fdc_generated(from: "Mechanic", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `OrderPart` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  orderPart(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: OrderPart_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: OrderPart_FirstRow
+  ): OrderPart @fdc_generated(from: "OrderPart", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `OrderService` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  orderService(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: OrderService_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: OrderService_FirstRow
+  ): OrderService @fdc_generated(from: "OrderService", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Part` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  part(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Part_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Part_FirstRow
+  ): Part @fdc_generated(from: "Part", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `ServiceCategory` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  serviceCategory(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: ServiceCategory_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: ServiceCategory_FirstRow
+  ): ServiceCategory @fdc_generated(from: "ServiceCategory", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `StockMovement` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  stockMovement(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: StockMovement_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: StockMovement_FirstRow
+  ): StockMovement @fdc_generated(from: "StockMovement", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `UserProfile` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  userProfile(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: UserProfile_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: UserProfile_FirstRow
+  ): UserProfile @fdc_generated(from: "UserProfile", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Vehicle` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  vehicle(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Vehicle_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Vehicle_FirstRow
+  ): Vehicle @fdc_generated(from: "Vehicle", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `WorkOrder` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  workOrder(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: WorkOrder_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: WorkOrder_FirstRow
+  ): WorkOrder @fdc_generated(from: "WorkOrder", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `WorkshopService` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  workshopService(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: WorkshopService_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: WorkshopService_FirstRow
+  ): WorkshopService @fdc_generated(from: "WorkshopService", purpose: QUERY_SINGLE)
+  """
+  ✨ List `Client` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  clients(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Client_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Client_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Client_Having
+  ): [Client!]! @fdc_generated(from: "Client", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `ExternalJob` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  externalJobs(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: ExternalJob_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [ExternalJob_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: ExternalJob_Having
+  ): [ExternalJob!]! @fdc_generated(from: "ExternalJob", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Mechanic` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  mechanics(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Mechanic_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Mechanic_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Mechanic_Having
+  ): [Mechanic!]! @fdc_generated(from: "Mechanic", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `OrderPart` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  orderParts(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: OrderPart_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [OrderPart_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: OrderPart_Having
+  ): [OrderPart!]! @fdc_generated(from: "OrderPart", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `OrderService` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  orderServices(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: OrderService_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [OrderService_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: OrderService_Having
+  ): [OrderService!]! @fdc_generated(from: "OrderService", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Part` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  parts(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Part_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Part_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Part_Having
+  ): [Part!]! @fdc_generated(from: "Part", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `ServiceCategory` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  serviceCategories(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: ServiceCategory_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [ServiceCategory_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: ServiceCategory_Having
+  ): [ServiceCategory!]! @fdc_generated(from: "ServiceCategory", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `StockMovement` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  stockMovements(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: StockMovement_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [StockMovement_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: StockMovement_Having
+  ): [StockMovement!]! @fdc_generated(from: "StockMovement", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `UserProfile` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  userProfiles(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: UserProfile_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [UserProfile_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: UserProfile_Having
+  ): [UserProfile!]! @fdc_generated(from: "UserProfile", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Vehicle` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  vehicles(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Vehicle_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Vehicle_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Vehicle_Having
+  ): [Vehicle!]! @fdc_generated(from: "Vehicle", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `WorkOrder` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  workOrders(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: WorkOrder_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [WorkOrder_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: WorkOrder_Having
+  ): [WorkOrder!]! @fdc_generated(from: "WorkOrder", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `WorkshopService` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  workshopServices(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: WorkshopService_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [WorkshopService_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: WorkshopService_Having
+  ): [WorkshopService!]! @fdc_generated(from: "WorkshopService", purpose: QUERY_MULTIPLE)
+}
