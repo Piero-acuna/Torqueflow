@@ -1,66 +1,6 @@
-extend type ExternalJob {
-  """
-  ✨ Implicit foreign key field based on `ExternalJob`.`order`. It must match the value of `WorkOrder`.`id`. See `@ref` for how to customize it.
-  """
-  orderId: UUID! @fdc_generated(from: "ExternalJob.order", purpose: IMPLICIT_REF_FIELD)
-}
-extend type OrderPart {
-  """
-  ✨ Implicit foreign key field based on `OrderPart`.`order`. It must match the value of `WorkOrder`.`id`. See `@ref` for how to customize it.
-  """
-  orderId: UUID! @fdc_generated(from: "OrderPart.order", purpose: IMPLICIT_REF_FIELD)
-  """
-  ✨ Implicit foreign key field based on `OrderPart`.`part`. It must match the value of `Part`.`id`. See `@ref` for how to customize it.
-  """
-  partId: UUID! @fdc_generated(from: "OrderPart.part", purpose: IMPLICIT_REF_FIELD)
-}
-extend type OrderService {
-  """
-  ✨ Implicit foreign key field based on `OrderService`.`order`. It must match the value of `WorkOrder`.`id`. See `@ref` for how to customize it.
-  """
-  orderId: UUID! @fdc_generated(from: "OrderService.order", purpose: IMPLICIT_REF_FIELD)
-  """
-  ✨ Implicit foreign key field based on `OrderService`.`service`. It must match the value of `WorkshopService`.`id`. See `@ref` for how to customize it.
-  """
-  serviceId: UUID! @fdc_generated(from: "OrderService.service", purpose: IMPLICIT_REF_FIELD)
-}
-extend type StockMovement {
-  """
-  ✨ Implicit foreign key field based on `StockMovement`.`createdBy`. It must match the value of `UserProfile`.`id`. See `@ref` for how to customize it.
-  """
-  createdById: String! @fdc_generated(from: "StockMovement.createdBy", purpose: IMPLICIT_REF_FIELD)
-  """
-  ✨ Implicit foreign key field based on `StockMovement`.`order`. It must match the value of `WorkOrder`.`id`. See `@ref` for how to customize it.
-  """
-  orderId: UUID @fdc_generated(from: "StockMovement.order", purpose: IMPLICIT_REF_FIELD)
-  """
-  ✨ Implicit foreign key field based on `StockMovement`.`part`. It must match the value of `Part`.`id`. See `@ref` for how to customize it.
-  """
-  partId: UUID! @fdc_generated(from: "StockMovement.part", purpose: IMPLICIT_REF_FIELD)
-}
 extend type Vehicle {
   """
   ✨ Implicit foreign key field based on `Vehicle`.`client`. It must match the value of `Client`.`id`. See `@ref` for how to customize it.
   """
   clientId: UUID! @fdc_generated(from: "Vehicle.client", purpose: IMPLICIT_REF_FIELD)
-}
-extend type WorkOrder {
-  """
-  ✨ Implicit foreign key field based on `WorkOrder`.`createdBy`. It must match the value of `UserProfile`.`id`. See `@ref` for how to customize it.
-  """
-  createdById: String! @fdc_generated(from: "WorkOrder.createdBy", purpose: IMPLICIT_REF_FIELD)
-  """
-  ✨ Implicit foreign key field based on `WorkOrder`.`mechanic`. It must match the value of `Mechanic`.`id`. See `@ref` for how to customize it.
-  """
-  mechanicId: UUID @fdc_generated(from: "WorkOrder.mechanic", purpose: IMPLICIT_REF_FIELD)
-  """
-  ✨ Implicit foreign key field based on `WorkOrder`.`vehicle`. It must match the value of `Vehicle`.`id`. See `@ref` for how to customize it.
-  """
-  vehicleId: UUID! @fdc_generated(from: "WorkOrder.vehicle", purpose: IMPLICIT_REF_FIELD)
-}
-extend type WorkshopService {
-  """
-  ✨ Implicit foreign key field based on `WorkshopService`.`category`. It must match the value of `ServiceCategory`.`id`. See `@ref` for how to customize it.
-  """
-  categoryId: UUID! @fdc_generated(from: "WorkshopService.category", purpose: IMPLICIT_REF_FIELD)
 }

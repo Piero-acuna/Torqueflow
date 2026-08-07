@@ -1,13 +1,26 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BrandLogo } from "../../components/brand/BrandLogo";
 import { Button } from "../../components/common/Button";
 import { FormField, Input } from "../../components/common/FormField";
 import { useAuth } from "../../contexts/AuthContext";
+import { getLockoutStatus, formatRemaining } from "../../lib/loginAttempts";
 
 export function LoginPage() {
-  const { login, error } = useAuth();
+  const { login, resetPassword, error } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [mode, setMode] = useState("login");
+  const [resetMessage, setResetMessage] = useState("");
+  const [lockout, setLockout] = useState({ locked: false, remainingMs: 0 });
+
+  useEffect(() => {
+    if (!lockout.locked) return undefined;
+    const interval = setInterval(() => {
+      const next = getLockoutStatus(form.email);
+      setLockout(next);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockout.locked, form.email]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -15,10 +28,48 @@ export function LoginPage() {
     try {
       await login(form.email.trim(), form.password);
     } catch {
-      // El contexto muestra el mensaje amigable.
+      setLockout(getLockoutStatus(form.email));
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleReset(event) {
+    event.preventDefault();
+    if (!form.email.trim()) return;
+    setSubmitting(true);
+    setResetMessage("");
+    try {
+      await resetPassword(form.email.trim());
+    } catch {
+      // No revelamos si el correo existe o no: mismo mensaje en ambos casos.
+    } finally {
+      setResetMessage("Si el correo pertenece a una cuenta del taller, enviamos un enlace para restablecer la contraseña.");
+      setSubmitting(false);
+    }
+  }
+
+  if (mode === "reset") {
+    return (
+      <main className="auth-page auth-page--center">
+        <section className="auth-card">
+          <BrandLogo className="auth-card__brand" size="large" />
+          <div>
+            <span className="eyebrow">Recuperar acceso</span>
+            <h2>Restablecer contraseña</h2>
+            <p>Te enviaremos un enlace a tu correo para crear una nueva contraseña.</p>
+          </div>
+          <form className="form-stack" onSubmit={handleReset}>
+            <FormField label="Correo electrónico" required>
+              <Input type="email" autoComplete="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
+            </FormField>
+            {resetMessage ? <div className="form-alert form-alert--success">{resetMessage}</div> : null}
+            <Button type="submit" disabled={submitting}>{submitting ? "Enviando…" : "Enviar enlace"}</Button>
+            <Button type="button" variant="ghost" onClick={() => { setMode("login"); setResetMessage(""); }}>Volver a iniciar sesión</Button>
+          </form>
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -48,7 +99,10 @@ export function LoginPage() {
             <Input type="password" autoComplete="current-password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required />
           </FormField>
           {error ? <div className="form-alert form-alert--error">{error}</div> : null}
-          <Button type="submit" disabled={submitting}>{submitting ? "Ingresando…" : "Ingresar"}</Button>
+          <Button type="submit" disabled={submitting || lockout.locked}>
+            {lockout.locked ? `Bloqueado (${formatRemaining(lockout.remainingMs)})` : submitting ? "Ingresando…" : "Ingresar"}
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => { setMode("reset"); setResetMessage(""); }}>Olvidé mi contraseña</Button>
         </form>
       </section>
     </main>

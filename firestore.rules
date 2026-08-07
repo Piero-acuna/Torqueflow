@@ -50,16 +50,16 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // clients y vehicles se migraron a SQL (Data Connect / Postgres).
+      // Se dejan bloqueadas explícitamente en vez de borrar la regla para
+      // que datos viejos que aún no se hayan migrado con
+      // scripts/migrate-clients-to-sql.mjs no queden accesibles por error.
       match /clients/{clientId} {
-        allow read: if staff(workshopId);
-        allow create, update: if hasRole(workshopId, ['admin', 'advisor']);
-        allow delete: if admin(workshopId);
+        allow read, write: if false;
       }
 
       match /vehicles/{vehicleId} {
-        allow read: if staff(workshopId);
-        allow create, update: if hasRole(workshopId, ['admin', 'advisor']);
-        allow delete: if admin(workshopId);
+        allow read, write: if false;
       }
 
       match /mechanics/{mechanicId} {

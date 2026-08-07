@@ -8,7 +8,7 @@ import { Badge } from "../../components/common/Badge";
 import { useCollection } from "../../hooks/useCollection";
 import { ordersRef } from "../../services/orders.service";
 import { partsRef } from "../../services/inventory.service";
-import { clientsRef } from "../../services/clients.service";
+import { useClients } from "../../services/clients.service";
 import { formatDate, formatMoney } from "../../lib/formatters";
 import { useWorkshop } from "../../contexts/WorkshopContext";
 import { navigate } from "../../hooks/useHashRoute";
@@ -19,10 +19,9 @@ export function DashboardPage() {
   const { workshop } = useWorkshop();
   const orderCollection = useMemo(() => ordersRef(), []);
   const partCollection = useMemo(() => partsRef(), []);
-  const clientCollection = useMemo(() => clientsRef(), []);
   const { data: orders, loading } = useCollection(orderCollection, orderBy("createdAt", "desc"));
   const { data: parts } = useCollection(partCollection, orderBy("name", "asc"));
-  const { data: clients } = useCollection(clientCollection, orderBy("name", "asc"));
+  const { data: clients = [] } = useClients();
 
   const activeOrders = orders.filter((order) => ACTIVE.has(order.status));
   const readyOrders = orders.filter((order) => order.status === "ready");

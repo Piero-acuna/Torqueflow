@@ -1,187 +1,61 @@
-enum UserRole {
-  ADMIN
-  ADVISOR
-  MECHANIC
-  CASHIER
-}
+# Esquema de Cloud SQL (Postgres) vía Firebase Data Connect.
+#
+# Alcance deliberadamente acotado: SOLO "Client" y "Vehicle" viven aquí.
+# El resto del sistema (órdenes, repuestos, movimientos de stock, mecánicos,
+# servicios) sigue en Firestore porque necesita lecturas en tiempo real y
+# transacciones optimistas que Data Connect no ofrece igual.
+#
+# IMPORTANTE — modelo de seguridad:
+# Data Connect no puede evaluar la membresía de un taller (eso vive en
+# Firestore, en workshops/{workshopId}/members/{uid}). Por eso NINGUNA
+# operación de este conector se expone al cliente con auth de usuario:
+# todas están marcadas @auth(level: NO_ACCESS) en connector.gql y solo se
+# ejecutan desde el backend (funciones de Vercel) usando el SDK admin de
+# Firebase, que verifica el token + la membresía en Firestore antes de
+# tocar Postgres. Todas las filas llevan "workshopId" y cada consulta/mutación
+# lo recibe como variable obligatoria; es responsabilidad de la capa de API
+# (no de la base) filtrar y validar ese valor. Ver api/_lib/require-member.js.
 
-enum OrderStatus {
-  REVIEW
-  WAITING_PARTS
-  EXTERNAL
-  READY
-  DELIVERED
-  CANCELLED
-}
-
-enum OrderPriority {
-  NORMAL
-  HIGH
-  URGENT
-}
-
-enum PaymentStatus {
-  PENDING
-  PARTIAL
-  PAID
-}
-
-enum StockMovementType {
-  PURCHASE
-  ORDER_OUTPUT
-  RETURN
-  POSITIVE_ADJUSTMENT
-  NEGATIVE_ADJUSTMENT
-}
-
-type UserProfile @table {
-  id: String! @default(expr: "auth.uid")
-  name: String!
-  email: String!
-  role: UserRole!
-  active: Boolean! @default(value: true)
-  createdAt: Timestamp! @default(expr: "request.time")
-}
-
-type Client @table {
+type Client @table(name: "clients", key: ["id"]) {
   id: UUID! @default(expr: "uuidV4()")
+  workshopId: String!
+  type: String! @default(value: "person")
   documentType: String
   documentNumber: String
   name: String!
   phone: String
   email: String
   address: String
+  segment: String! @default(value: "new")
+  creditLimit: Float! @default(value: 0)
   notes: String
   active: Boolean! @default(value: true)
   createdAt: Timestamp! @default(expr: "request.time")
   updatedAt: Timestamp! @default(expr: "request.time")
 }
 
-type Vehicle @table {
+type Vehicle @table(name: "vehicles", key: ["id"]) {
   id: UUID! @default(expr: "uuidV4()")
+  workshopId: String!
   client: Client!
   plate: String!
-  brand: String!
-  model: String!
+  brand: String
+  model: String
   year: Int
   color: String
   mileage: Int
   fuelType: String
   vin: String
+  notes: String
   active: Boolean! @default(value: true)
-  createdAt: Timestamp! @default(expr: "request.time")
-}
-
-type Mechanic @table {
-  id: UUID! @default(expr: "uuidV4()")
-  name: String!
-  phone: String
-  specialty: String
-  active: Boolean! @default(value: true)
-  createdAt: Timestamp! @default(expr: "request.time")
-}
-
-type ServiceCategory @table {
-  id: UUID! @default(expr: "uuidV4()")
-  name: String!
-  active: Boolean! @default(value: true)
-}
-
-type WorkshopService @table {
-  id: UUID! @default(expr: "uuidV4()")
-  category: ServiceCategory!
-  name: String!
-  description: String
-  basePrice: Float!
-  estimatedMinutes: Int
-  active: Boolean! @default(value: true)
-}
-
-type WorkOrder @table {
-  id: UUID! @default(expr: "uuidV4()")
-  orderNumber: Int!
-  vehicle: Vehicle!
-  mechanic: Mechanic
-  status: OrderStatus! @default(value: REVIEW)
-  priority: OrderPriority! @default(value: NORMAL)
-  diagnosis: String!
-  customerComplaint: String
-  entryAt: Timestamp! @default(expr: "request.time")
-  estimatedDeliveryAt: Timestamp
-  deliveredAt: Timestamp
-  fuelLevel: Int
-  budgetLimit: Float
-  laborCost: Float! @default(value: 0)
-  externalCost: Float! @default(value: 0)
-  partsCost: Float! @default(value: 0)
-  discount: Float! @default(value: 0)
-  totalCost: Float! @default(value: 0)
-  amountCharged: Float! @default(value: 0)
-  paymentStatus: PaymentStatus! @default(value: PENDING)
-  internalNotes: String
-  createdBy: UserProfile!
   createdAt: Timestamp! @default(expr: "request.time")
   updatedAt: Timestamp! @default(expr: "request.time")
 }
 
-type OrderService @table {
-  id: UUID! @default(expr: "uuidV4()")
-  order: WorkOrder!
-  service: WorkshopService!
-  quantity: Int! @default(value: 1)
-  unitPrice: Float!
-  subtotal: Float!
-}
-
-type Part @table {
-  id: UUID! @default(expr: "uuidV4()")
-  code: String!
-  name: String!
-  category: String
-  brand: String
-  location: String
-  supplier: String
-  currentStock: Int! @default(value: 0)
-  minimumStock: Int! @default(value: 0)
-  maximumStock: Int
-  averageCost: Float! @default(value: 0)
-  salePrice: Float! @default(value: 0)
-  active: Boolean! @default(value: true)
-  createdAt: Timestamp! @default(expr: "request.time")
-}
-
-type OrderPart @table {
-  id: UUID! @default(expr: "uuidV4()")
-  order: WorkOrder!
-  part: Part!
-  quantity: Int!
-  unitCost: Float!
-  subtotal: Float!
-}
-
-type ExternalJob @table {
-  id: UUID! @default(expr: "uuidV4()")
-  order: WorkOrder!
-  serviceType: String!
-  provider: String!
-  description: String
-  departureAt: Timestamp
-  returnAt: Timestamp
-  cost: Float! @default(value: 0)
-  status: String!
-}
-
-type StockMovement @table {
-  id: UUID! @default(expr: "uuidV4()")
-  part: Part!
-  order: WorkOrder
-  type: StockMovementType!
-  quantity: Int!
-  previousStock: Int!
-  resultingStock: Int!
-  unitCost: Float
-  reference: String
-  notes: String
-  createdBy: UserProfile!
-  createdAt: Timestamp! @default(expr: "request.time")
-}
+# Nota de seguimiento (no bloquea el despliegue):
+# conviene agregar, con una migración SQL manual, índices compuestos
+# (workshop_id, name) en clients y (workshop_id, plate) en vehicles, y una
+# restricción UNIQUE (workshop_id, plate) para no depender solo de la
+# validación de aplicación. Data Connect permite migraciones SQL a mano en
+# dataconnect/schema junto al .gql; no se generó aquí porque requiere
+# probarse contra la instancia real de Cloud SQL.

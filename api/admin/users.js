@@ -1,10 +1,5 @@
 import { FieldValue } from "firebase-admin/firestore";
-import { adminAuth, adminDb, requireAdmin } from "../_lib/firebase-admin.js";
-
-function send(response, status, payload) {
-  response.status(status).setHeader("Content-Type", "application/json");
-  response.end(JSON.stringify(payload));
-}
+import { adminAuth, adminDb, parseBody, requireAdmin, send, workshopIdFromEnv } from "../_lib/firebase-admin.js";
 
 function validateRole(role) {
   return ["admin", "advisor", "mechanic", "cashier"].includes(role);
@@ -17,9 +12,8 @@ export default async function handler(request, response) {
   }
 
   try {
-    const body = typeof request.body === "string" ? JSON.parse(request.body || "{}") : (request.body || {});
-    const workshopId = process.env.FIREBASE_WORKSHOP_ID || body.workshopId;
-    if (!workshopId) return send(response, 400, { error: "FIREBASE_WORKSHOP_ID no está configurado." });
+    const body = parseBody(request);
+    const workshopId = workshopIdFromEnv();
     const actor = await requireAdmin(request, workshopId);
 
     if (request.method === "POST") {

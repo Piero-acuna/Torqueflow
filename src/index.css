@@ -196,6 +196,7 @@ select.input { appearance: auto; }
 .form-alert { padding: 11px 13px; border-radius: 10px; font-size: 0.78rem; }
 .form-alert--error { color: #ffadb4; background: var(--red-soft); border: 1px solid rgba(239, 82, 97, 0.24); }
 .form-alert--warning { color: #ffc275; background: var(--orange-soft); border: 1px solid rgba(255, 138, 0, 0.24); }
+.form-alert--success { color: #7cf2a4; background: var(--green-soft, rgba(34, 197, 94, 0.12)); border: 1px solid rgba(34, 197, 94, 0.24); }
 
 /* Tables and toolbar */
 .toolbar { margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
