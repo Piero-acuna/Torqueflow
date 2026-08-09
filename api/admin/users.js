@@ -1,5 +1,5 @@
 import { FieldValue } from "firebase-admin/firestore";
-import { adminAuth, adminDb, parseBody, requireAdmin, send, workshopIdFromEnv } from "../_lib/firebase-admin.js";
+import { adminAuth, adminDb, parseBody, requireAdmin, resolveWorkshopId, send } from "../_lib/firebase-admin.js";
 
 function validateRole(role) {
   return ["admin", "advisor", "mechanic", "cashier"].includes(role);
@@ -13,7 +13,7 @@ export default async function handler(request, response) {
 
   try {
     const body = parseBody(request);
-    const workshopId = workshopIdFromEnv();
+    const workshopId = resolveWorkshopId(request, body);
     const actor = await requireAdmin(request, workshopId);
 
     if (request.method === "POST") {
@@ -22,7 +22,8 @@ export default async function handler(request, response) {
         return send(response, 400, { error: "Correo, contraseña, nombre y rol válido son obligatorios." });
       }
       const user = await adminAuth().createUser({ email, password, displayName, emailVerified: false, disabled: false });
-      await adminDb().doc(`workshops/${workshopId}/members/${user.uid}`).set({
+      const batch = adminDb().batch();
+      batch.set(adminDb().doc(`workshops/${workshopId}/members/${user.uid}`), {
         uid: user.uid,
         email,
         displayName,
@@ -32,6 +33,12 @@ export default async function handler(request, response) {
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp()
       });
+      batch.set(adminDb().doc(`users/${user.uid}`), {
+        workshopId,
+        email,
+        createdAt: FieldValue.serverTimestamp()
+      });
+      await batch.commit();
       return send(response, 201, { uid: user.uid, email, displayName, role });
     }
 

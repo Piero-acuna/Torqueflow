@@ -1,4 +1,4 @@
-import { parseBody, requireOperator, requireStaff, send, workshopIdFromEnv } from "../_lib/firebase-admin.js";
+import { parseBody, requireOperator, requireStaff, resolveWorkshopId, send } from "../_lib/firebase-admin.js";
 import { createClient, listClients } from "../_lib/dataconnect-admin.js";
 
 function validateInput(body) {
@@ -15,7 +15,8 @@ export default async function handler(request, response) {
   }
 
   try {
-    const workshopId = workshopIdFromEnv();
+    const body = request.method === "GET" ? {} : parseBody(request);
+    const workshopId = resolveWorkshopId(request, body);
 
     if (request.method === "GET") {
       await requireStaff(request, workshopId);
@@ -25,7 +26,6 @@ export default async function handler(request, response) {
     }
 
     const actor = await requireOperator(request, workshopId);
-    const body = parseBody(request);
     const validationError = validateInput(body);
     if (validationError) return send(response, 400, { error: validationError });
 

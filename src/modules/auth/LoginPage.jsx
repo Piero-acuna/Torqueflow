@@ -5,9 +5,13 @@ import { FormField, Input } from "../../components/common/FormField";
 import { useAuth } from "../../contexts/AuthContext";
 import { getLockoutStatus, formatRemaining } from "../../lib/loginAttempts";
 
+const EMPTY_REGISTER_FORM = { workshopName: "", ownerName: "", email: "", password: "", confirmPassword: "" };
+
 export function LoginPage() {
-  const { login, resetPassword, error } = useAuth();
+  const { login, register, resetPassword, error } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
+  const [registerForm, setRegisterForm] = useState(EMPTY_REGISTER_FORM);
+  const [registerError, setRegisterError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [mode, setMode] = useState("login");
   const [resetMessage, setResetMessage] = useState("");
@@ -49,6 +53,29 @@ export function LoginPage() {
     }
   }
 
+  async function handleRegister(event) {
+    event.preventDefault();
+    setRegisterError("");
+    if (registerForm.password !== registerForm.confirmPassword) {
+      setRegisterError("Las contraseñas no coinciden.");
+      return;
+    }
+    if (registerForm.password.length < 8) {
+      setRegisterError("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await register(registerForm);
+      // Si register() no lanza error, ya inició sesión automáticamente
+      // (llama a login() internamente) y App.jsx redirige solo.
+    } catch (registerErr) {
+      setRegisterError(registerErr.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   if (mode === "reset") {
     return (
       <main className="auth-page auth-page--center">
@@ -66,6 +93,41 @@ export function LoginPage() {
             {resetMessage ? <div className="form-alert form-alert--success">{resetMessage}</div> : null}
             <Button type="submit" disabled={submitting}>{submitting ? "Enviando…" : "Enviar enlace"}</Button>
             <Button type="button" variant="ghost" onClick={() => { setMode("login"); setResetMessage(""); }}>Volver a iniciar sesión</Button>
+          </form>
+        </section>
+      </main>
+    );
+  }
+
+  if (mode === "register") {
+    return (
+      <main className="auth-page auth-page--center">
+        <section className="auth-card">
+          <BrandLogo className="auth-card__brand" size="large" />
+          <div>
+            <span className="eyebrow">Nuevo taller</span>
+            <h2>Crea tu taller en TorqueFlow</h2>
+            <p>Esto crea un espacio de trabajo nuevo e independiente. Serás el administrador.</p>
+          </div>
+          <form className="form-stack" onSubmit={handleRegister}>
+            <FormField label="Nombre del taller" required>
+              <Input value={registerForm.workshopName} onChange={(event) => setRegisterForm({ ...registerForm, workshopName: event.target.value })} required />
+            </FormField>
+            <FormField label="Tu nombre" required>
+              <Input value={registerForm.ownerName} onChange={(event) => setRegisterForm({ ...registerForm, ownerName: event.target.value })} required />
+            </FormField>
+            <FormField label="Correo electrónico" required>
+              <Input type="email" autoComplete="email" value={registerForm.email} onChange={(event) => setRegisterForm({ ...registerForm, email: event.target.value })} required />
+            </FormField>
+            <FormField label="Contraseña" required>
+              <Input type="password" autoComplete="new-password" minLength="8" value={registerForm.password} onChange={(event) => setRegisterForm({ ...registerForm, password: event.target.value })} required />
+            </FormField>
+            <FormField label="Confirmar contraseña" required>
+              <Input type="password" autoComplete="new-password" minLength="8" value={registerForm.confirmPassword} onChange={(event) => setRegisterForm({ ...registerForm, confirmPassword: event.target.value })} required />
+            </FormField>
+            {registerError ? <div className="form-alert form-alert--error">{registerError}</div> : null}
+            <Button type="submit" disabled={submitting}>{submitting ? "Creando taller…" : "Crear taller"}</Button>
+            <Button type="button" variant="ghost" onClick={() => { setMode("login"); setRegisterError(""); }}>Ya tengo una cuenta</Button>
           </form>
         </section>
       </main>
@@ -103,6 +165,7 @@ export function LoginPage() {
             {lockout.locked ? `Bloqueado (${formatRemaining(lockout.remainingMs)})` : submitting ? "Ingresando…" : "Ingresar"}
           </Button>
           <Button type="button" variant="ghost" onClick={() => { setMode("reset"); setResetMessage(""); }}>Olvidé mi contraseña</Button>
+          <Button type="button" variant="ghost" onClick={() => { setMode("register"); setRegisterError(""); }}>Crear un taller nuevo</Button>
         </form>
       </section>
     </main>

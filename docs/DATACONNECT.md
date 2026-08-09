@@ -24,9 +24,14 @@ Data Connect **no puede leer la membresía de un taller** (eso vive en
    ver `api/_lib/dataconnect-admin.js`), que sí puede ejecutar las
    operaciones porque ignora los `@auth` del conector — por diseño, solo se
    invoca después del paso 2.
-4. `workshopId` **siempre** sale de `FIREBASE_WORKSHOP_ID` (variable de
-   entorno del servidor), nunca del cuerpo de la petición, para que nadie
-   pueda pedir datos de otro taller cambiando un campo del JSON.
+4. `workshopId` viaja en cada petición (query param en GET, campo del body en
+   el resto) — ya **no** hay un único taller fijo por variable de entorno,
+   porque desde que existe el registro público (`api/auth/register.js`) cada
+   cuenta puede crear su propio taller. Esto es seguro porque el paso 2 no es
+   opcional: si el uid del token no es miembro activo de *ese* workshopId
+   exacto, `requireMember` responde 403 sin que la petición llegue a tocar
+   Postgres — no importa qué workshopId haya mandado el cliente. La
+   protección la da la verificación de membresía, no el origen del dato.
 
 ## Por qué no hay SDK generado
 

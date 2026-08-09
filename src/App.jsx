@@ -4,7 +4,7 @@ import { LoadingScreen } from "./components/common/LoadingScreen";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { WorkshopProvider } from "./contexts/WorkshopContext";
-import { workshopId } from "./firebase/client";
+import { firebaseConfigured } from "./firebase/client";
 import { useHashRoute } from "./hooks/useHashRoute";
 import { LoginPage, AccessPending } from "./modules/auth/LoginPage";
 import { DashboardPage } from "./modules/dashboard/DashboardPage";
@@ -33,7 +33,7 @@ function RoutedApplication() {
   const path = useHashRoute();
   const basePath = path.split("?")[0];
 
-  if (!workshopId) return <ConfigMissing />;
+  if (!firebaseConfigured) return <ConfigMissing />;
   if (loading) return <LoadingScreen message="Validando acceso…" />;
   if (!user) return <LoginPage />;
   if (!member || member.active === false) return <AccessPending />;

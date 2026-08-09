@@ -1,4 +1,4 @@
-import { parseBody, requireAdmin, requireOperator, requireStaff, send, workshopIdFromEnv } from "../_lib/firebase-admin.js";
+import { parseBody, requireAdmin, requireOperator, requireStaff, resolveWorkshopId, send } from "../_lib/firebase-admin.js";
 import { deactivateVehicle, getVehicle, updateVehicle } from "../_lib/dataconnect-admin.js";
 
 export default async function handler(request, response) {
@@ -11,7 +11,8 @@ export default async function handler(request, response) {
   if (!id) return send(response, 400, { error: "Falta el identificador del vehículo." });
 
   try {
-    const workshopId = workshopIdFromEnv();
+    const body = request.method === "GET" ? {} : parseBody(request);
+    const workshopId = resolveWorkshopId(request, body);
 
     if (request.method === "GET") {
       await requireStaff(request, workshopId);
@@ -22,7 +23,6 @@ export default async function handler(request, response) {
 
     if (request.method === "PATCH") {
       await requireOperator(request, workshopId);
-      const body = parseBody(request);
       const vehicle = await updateVehicle(workshopId, id, {
         plate: body.plate?.trim().toUpperCase() || undefined,
         brand: body.brand?.trim() || undefined,

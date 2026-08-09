@@ -37,7 +37,7 @@ const TABS = [
 
 export function SettingsPage() {
   const { workshop } = useWorkshop();
-  const { isAdmin } = useAuth();
+  const { isAdmin, workshopId } = useAuth();
   const { showToast } = useToast();
   const [tab, setTab] = useState("business");
   const [settings, setSettings] = useState(workshop);
@@ -120,7 +120,7 @@ export function SettingsPage() {
   async function createUser(event) {
     event.preventDefault();
     try {
-      await usersService.create(userForm);
+      await usersService.create(workshopId, userForm);
       setUserForm({ email: "", password: "", displayName: "", role: "advisor" });
       setUserModal(false);
       showToast("Usuario creado correctamente.");

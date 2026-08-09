@@ -1,18 +1,26 @@
 import { FieldValue } from "firebase-admin/firestore";
+import { getDataConnect } from "firebase-admin/data-connect";
 import { adminDb } from "./firebase-admin.mjs";
 
-const workshopId = process.env.FIREBASE_WORKSHOP_ID || process.env.VITE_FIREBASE_WORKSHOP_ID;
+// Antes había un solo taller por despliegue (FIREBASE_WORKSHOP_ID). Ahora
+// cada registro crea el suyo, así que hay que indicar cuál limpiar:
+//   npm run clear:data -- --workshop=<id> --confirm=<id>
+const argWorkshop = process.argv.find((arg) => arg.startsWith("--workshop="))?.split("=")[1];
+const workshopId = argWorkshop || process.env.FIREBASE_WORKSHOP_ID || process.env.VITE_FIREBASE_WORKSHOP_ID;
 const confirm = process.argv.find((arg) => arg.startsWith("--confirm="))?.split("=")[1];
 const resetSettings = process.argv.includes("--reset-settings");
+const clearSql = process.argv.includes("--include-sql");
 
-if (!workshopId) throw new Error("FIREBASE_WORKSHOP_ID no está configurado.");
+if (!workshopId) throw new Error("Indica --workshop=<id> (o configura FIREBASE_WORKSHOP_ID para el flujo antiguo de un solo taller).");
 if (confirm !== workshopId) {
-  throw new Error(`Confirmación requerida: npm run clear:data -- --confirm=${workshopId}`);
+  throw new Error(`Confirmación requerida: npm run clear:data -- --workshop=${workshopId} --confirm=${workshopId}`);
 }
 
+// clients y vehicles ya NO viven en Firestore, se movieron a Postgres
+// (Data Connect). Por defecto este script solo limpia Firestore; pasa
+// --include-sql para borrar también los clientes/vehículos de ese taller
+// en Postgres.
 const collections = [
-  "clients",
-  "vehicles",
   "mechanics",
   "serviceCategories",
   "services",
@@ -35,6 +43,20 @@ async function deleteCollection(path, batchSize = 250) {
 
 for (const name of collections) {
   await deleteCollection(`workshops/${workshopId}/${name}`);
+}
+
+if (clearSql) {
+  const connectorConfig = { connector: "torqueflow-connector", service: "torqueflow-service", location: "southamerica-east1" };
+  const dataConnect = getDataConnect(connectorConfig, adminDb.app);
+  const response = await dataConnect.executeGraphql(
+    `mutation ClearWorkshop($workshopId: String!) {
+      vehicles_deleteMany(where: { workshopId: { eq: $workshopId } })
+      clients_deleteMany(where: { workshopId: { eq: $workshopId } })
+    }`,
+    { variables: { workshopId } }
+  );
+  if (response.errors?.length) throw new Error(response.errors.map((error) => error.message).join(" / "));
+  console.log("Clientes y vehículos eliminados de Postgres.");
 }
 
 const update = {

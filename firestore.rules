@@ -37,6 +37,14 @@ service cloud.firestore {
       return hasRole(workshopId, ['admin', 'advisor', 'mechanic', 'cashier']);
     }
 
+    match /users/{uid} {
+      // Apunta al taller de cada usuario (users/{uid}.workshopId). Solo lo
+      // escribe el backend con el SDK admin, al registrar un taller nuevo
+      // (api/auth/register.js) o al invitar a alguien (api/admin/users.js).
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
     match /workshops/{workshopId} {
       allow read: if activeMember(workshopId);
       allow create: if admin(workshopId);

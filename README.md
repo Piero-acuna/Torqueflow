@@ -1,6 +1,6 @@
 # TorqueFlow
 
-Aplicación web para gestionar un taller mecánico. Esta versión está organizada por módulos, no incluye clientes, órdenes, servicios, mecánicos, repuestos ni movimientos de demostración y usa un modelo de datos híbrido: **Cloud Firestore** para todo lo operativo/tiempo-real, y **Postgres (Firebase Data Connect)** solo para clientes y vehículos.
+Aplicación web para gestionar un taller mecánico. Cada cuenta puede crear su propio taller desde la pantalla de login ("Crear un taller nuevo") — son espacios de trabajo completamente independientes entre sí. Esta versión está organizada por módulos, no incluye clientes, órdenes, servicios, mecánicos, repuestos ni movimientos de demostración y usa un modelo de datos híbrido: **Cloud Firestore** para todo lo operativo/tiempo-real, y **Postgres (Firebase Data Connect)** solo para clientes y vehículos. Ver `docs/MULTI-TENANT.md` para el detalle de cómo funciona el registro y el aislamiento entre talleres.
 
 ## Qué incluye
 
@@ -78,33 +78,33 @@ VITE_FIREBASE_PROJECT_ID=...
 VITE_FIREBASE_STORAGE_BUCKET=...
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
-VITE_FIREBASE_WORKSHOP_ID=taller-principal
 
 FIREBASE_SERVICE_ACCOUNT_JSON={...}
-FIREBASE_WORKSHOP_ID=taller-principal
-OWNER_EMAIL=administrador@correo.com
-OWNER_PASSWORD=una-clave-segura
-OWNER_NAME=Administrador
 ```
 
 Las variables con prefijo `VITE_` llegan al navegador. Nunca coloques la cuenta de servicio en una variable `VITE_`.
 
-## 3. Instalar y crear el propietario
+> `FIREBASE_WORKSHOP_ID` / `VITE_FIREBASE_WORKSHOP_ID` ya **no** son obligatorias: existían cuando había un único taller fijo por despliegue. Ahora cada cuenta crea su propio taller desde el login (ver sección 3). Solo hacen falta si vas a usar `bootstrap:owner` o `clear:data` para el flujo antiguo de un solo taller (por ejemplo, para tener un taller de pruebas fijo en desarrollo).
+
+## 3. Instalar y crear la primera cuenta
 
 ```bash
 npm install
-npm run bootstrap:owner
 npm run firebase:rules
 npm run dev
 ```
 
-El script `bootstrap:owner` crea únicamente:
+Con esto ya puedes entrar a la app y usar **"Crear un taller nuevo"** en la pantalla de login: pide nombre del taller, tu nombre, correo y contraseña, y te deja como administrador de un taller vacío (sin clientes, órdenes, mecánicos, servicios ni repuestos de demostración).
 
-- El documento principal del taller con campos vacíos.
-- El primer usuario administrador.
-- La membresía del administrador.
+### Alternativa: `bootstrap:owner` (flujo de un solo taller fijo)
 
-No crea clientes, vehículos, órdenes, mecánicos, servicios, categorías ni repuestos.
+Si prefieres seguir usando un `workshopId` fijo por variable de entorno (por ejemplo, para un entorno de desarrollo reproducible) en vez de registrarte desde la UI:
+
+```bash
+OWNER_EMAIL=administrador@correo.com OWNER_PASSWORD=una-clave-segura OWNER_NAME=Administrador FIREBASE_WORKSHOP_ID=taller-principal npm run bootstrap:owner
+```
+
+El script `bootstrap:owner` crea únicamente el documento del taller, el primer usuario administrador y su membresía — nada de datos operativos.
 
 ## 4. Operación inicial
 
@@ -130,19 +130,19 @@ Es idempotente (marca cada documento migrado), así que puedes correrlo varias v
 
 ## 6. Eliminar datos existentes
 
-El siguiente comando elimina datos operativos, conserva usuarios y membresías, y reinicia la numeración:
+El siguiente comando elimina datos operativos de un taller puntual, conserva usuarios y membresías, y reinicia la numeración:
 
 ```bash
-npm run clear:data -- --confirm=taller-principal
+npm run clear:data -- --workshop=<workshopId> --confirm=<workshopId>
 ```
 
-Para limpiar también la configuración comercial:
+Para limpiar también la configuración comercial, o incluir clientes/vehículos en Postgres:
 
 ```bash
-npm run clear:data -- --confirm=taller-principal --reset-settings
+npm run clear:data -- --workshop=<workshopId> --confirm=<workshopId> --reset-settings --include-sql
 ```
 
-El script requiere la cuenta de servicio configurada en `.env.local` y una confirmación que coincida exactamente con el ID del taller.
+El script requiere la cuenta de servicio configurada en `.env.local` y una confirmación que coincida exactamente con el ID del taller. Encuentra el `workshopId` de un taller en Firebase Console (Firestore → colección `workshops`) o en el documento `users/{uid}` del dueño.
 
 ## 7. Validación
 
@@ -156,7 +156,7 @@ npm run build
 
 1. Sube el proyecto a GitHub.
 2. Importa el repositorio en Vercel.
-3. Agrega las variables `VITE_FIREBASE_*`, `FIREBASE_SERVICE_ACCOUNT_JSON` y `FIREBASE_WORKSHOP_ID`.
+3. Agrega las variables `VITE_FIREBASE_*` y `FIREBASE_SERVICE_ACCOUNT_JSON` (`FIREBASE_WORKSHOP_ID` ya no es obligatoria, ver sección 2).
 4. Framework: Vite.
 5. Build: `npm run build`.
 6. Output: `dist`.
@@ -183,6 +183,7 @@ vehicles  (id, workshopId, clientId → clients.id, plate, brand, model, year, c
 **Firestore** — todo lo demás:
 
 ```text
+users/{uid}                    # apunta al workshopId de cada cuenta (ver docs/MULTI-TENANT.md)
 workshops/{workshopId}
 ├── members/{uid}
 ├── mechanics/{mechanicId}

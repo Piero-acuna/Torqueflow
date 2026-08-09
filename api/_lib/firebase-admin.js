@@ -64,6 +64,23 @@ export function workshopIdFromEnv() {
   return workshopId;
 }
 
+/**
+ * Resuelve el workshopId a partir de la petición (query en GET, body en el
+ * resto). Ya no hay un único taller fijo por variable de entorno: cada
+ * registro crea su propio taller (ver api/auth/register.js), así que el
+ * taller lo indica el cliente y la seguridad la da SIEMPRE requireMember (y
+ * las funciones que verifican que el recurso pertenezca a ese workshopId)
+ * a continuación, nunca la sola presencia del campo. Si el uid no es
+ * miembro activo de ESE workshopId exacto, requireMember rechaza con 403,
+ * sin importar qué valor haya mandado el cliente.
+ */
+export function resolveWorkshopId(request, body) {
+  const fromQuery = typeof request.query?.workshopId === "string" ? request.query.workshopId : null;
+  const workshopId = fromQuery || body?.workshopId;
+  if (!workshopId) throw Object.assign(new Error("Falta el taller (workshopId)."), { status: 400 });
+  return workshopId;
+}
+
 export async function requireAdmin(request, workshopId) {
   return requireMember(request, workshopId, ["admin"]);
 }
