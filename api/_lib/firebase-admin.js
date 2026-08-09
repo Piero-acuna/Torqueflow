@@ -36,7 +36,7 @@ async function verifiedActor(request) {
 /**
  * Verifica el token de Firebase Auth y que el usuario sea miembro activo del
  * taller con alguno de los roles permitidos. Esta es la única barrera real
- * de aislamiento multi-taller para los datos en SQL (Data Connect no puede
+ * de aislamiento multi-taller para los datos en SQL (Supabase no puede
  * evaluar la membresía de Firestore), así que toda función que lea o
  * escriba clientes/vehículos debe pasar por aquí antes de tocar Postgres.
  */

@@ -1,5 +1,4 @@
 import { FieldValue } from "firebase-admin/firestore";
-import { getDataConnect } from "firebase-admin/data-connect";
 import { adminDb } from "./firebase-admin.mjs";
 
 // Antes había un solo taller por despliegue (FIREBASE_WORKSHOP_ID). Ahora
@@ -17,7 +16,7 @@ if (confirm !== workshopId) {
 }
 
 // clients y vehicles ya NO viven en Firestore, se movieron a Postgres
-// (Data Connect). Por defecto este script solo limpia Firestore; pasa
+// (Supabase). Por defecto este script solo limpia Firestore; pasa
 // --include-sql para borrar también los clientes/vehículos de ese taller
 // en Postgres.
 const collections = [
@@ -46,17 +45,16 @@ for (const name of collections) {
 }
 
 if (clearSql) {
-  const connectorConfig = { connector: "torqueflow-connector", service: "torqueflow-service", location: "southamerica-east1" };
-  const dataConnect = getDataConnect(connectorConfig, adminDb.app);
-  const response = await dataConnect.executeGraphql(
-    `mutation ClearWorkshop($workshopId: String!) {
-      vehicles_deleteMany(where: { workshopId: { eq: $workshopId } })
-      clients_deleteMany(where: { workshopId: { eq: $workshopId } })
-    }`,
-    { variables: { workshopId } }
-  );
-  if (response.errors?.length) throw new Error(response.errors.map((error) => error.message).join(" / "));
-  console.log("Clientes y vehículos eliminados de Postgres.");
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseKey) throw new Error("Configura SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY para usar --include-sql.");
+  const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+  const { error: vehiclesError } = await supabase.from("vehicles").delete().eq("workshop_id", workshopId);
+  if (vehiclesError) throw new Error(vehiclesError.message);
+  const { error: clientsError } = await supabase.from("clients").delete().eq("workshop_id", workshopId);
+  if (clientsError) throw new Error(clientsError.message);
+  console.log("Clientes y vehículos eliminados de Supabase.");
 }
 
 const update = {

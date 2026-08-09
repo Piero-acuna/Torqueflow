@@ -1,5 +1,5 @@
 import { parseBody, requireOperator, requireStaff, resolveWorkshopId, send } from "../_lib/firebase-admin.js";
-import { createClient, listClients } from "../_lib/dataconnect-admin.js";
+import { createClient, listClients } from "../_lib/supabase-admin.js";
 
 function validateInput(body) {
   const name = (body.name || "").trim();

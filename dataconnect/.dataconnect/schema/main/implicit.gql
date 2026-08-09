@@ -1,6 +1,0 @@
-extend type Vehicle {
-  """
-  ✨ Implicit foreign key field based on `Vehicle`.`client`. It must match the value of `Client`.`id`. See `@ref` for how to customize it.
-  """
-  clientId: UUID! @fdc_generated(from: "Vehicle.client", purpose: IMPLICIT_REF_FIELD)
-}

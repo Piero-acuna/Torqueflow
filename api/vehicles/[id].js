@@ -1,5 +1,5 @@
 import { parseBody, requireAdmin, requireOperator, requireStaff, resolveWorkshopId, send } from "../_lib/firebase-admin.js";
-import { deactivateVehicle, getVehicle, updateVehicle } from "../_lib/dataconnect-admin.js";
+import { deactivateVehicle, getVehicle, updateVehicle } from "../_lib/supabase-admin.js";
 
 export default async function handler(request, response) {
   if (!["GET", "PATCH", "DELETE"].includes(request.method)) {

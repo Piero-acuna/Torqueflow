@@ -1,5 +1,5 @@
 import { parseBody, requireOperator, requireStaff, resolveWorkshopId, send } from "../_lib/firebase-admin.js";
-import { createVehicle, listVehicles } from "../_lib/dataconnect-admin.js";
+import { createVehicle, listVehicles } from "../_lib/supabase-admin.js";
 
 function validateInput(body) {
   if (!body.clientId) return "El cliente es obligatorio.";
