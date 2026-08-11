@@ -34,22 +34,29 @@ export default async function handler(request, response) {
     // ── /api/orders/parts ───────────────────────────────────────────────────
     if (sub === "parts") {
       if (method === "POST") {
-        await requireOperator(request, workshopId);
+        const actor = await requireOperator(request, workshopId);
         const { orderId, partId, quantity, unitPrice } = body;
         if (!orderId || !partId) return send(response, 400, { error: "orderId y partId son requeridos." });
         const { data, error } = await getSupabaseAdmin().rpc("add_part_to_order", {
-          p_order_id: orderId, p_workshop_id: workshopId, p_part_id: partId,
-          p_quantity: Number(quantity || 1), p_unit_price: Number(unitPrice || 0)
+          p_order_id:   orderId,
+          p_part_id:    partId,
+          p_quantity:   Number(quantity || 1),
+          p_unit_price: Number(unitPrice || 0),
+          p_actor_id:   actor.uid,
+          p_actor_name: actor.name || actor.email || "Sistema"
         });
         if (error) throw Object.assign(new Error(error.message), { status: error.code === "P0001" ? 400 : 502 });
         return send(response, 200, { line: data });
       }
       if (method === "DELETE") {
-        await requireOperator(request, workshopId);
+        const actor = await requireOperator(request, workshopId);
         const { orderId, lineId } = body;
         if (!orderId || !lineId) return send(response, 400, { error: "orderId y lineId son requeridos." });
         const { error } = await getSupabaseAdmin().rpc("remove_part_from_order", {
-          p_order_id: orderId, p_workshop_id: workshopId, p_line_id: lineId
+          p_order_id:   orderId,
+          p_line_id:    lineId,
+          p_actor_id:   actor.uid,
+          p_actor_name: actor.name || actor.email || "Sistema"
         });
         if (error) throw new Error(error.message);
         return send(response, 200, { ok: true });
@@ -173,31 +180,36 @@ export default async function handler(request, response) {
 
     if (method === "POST") {
       await requireOperator(request, workshopId);
+      const payload = {
+        clientId:           body.clientId        || null,
+        vehicleId:          body.vehicleId        || null,
+        mechanicId:         body.mechanicId       || null,
+        clientName:         body.clientName       || "",
+        clientPhone:        body.clientPhone      || "",
+        vehicleLabel:       body.vehicleLabel     || "",
+        plate:              body.plate            || "",
+        mechanicName:       body.mechanicName     || "Sin asignar",
+        status:             body.status           || "review",
+        priority:           body.priority         || "normal",
+        paymentStatus:      body.paymentStatus    || "pending",
+        approvalStatus:     body.approvalStatus   || "pending",
+        customerComplaint:  body.customerComplaint || "",
+        diagnosis:          body.diagnosis        || "",
+        inspectionNotes:    body.inspectionNotes  || "",
+        internalNotes:      body.internalNotes    || "",
+        serviceLines:       body.serviceLines     || [],
+        laborCost:          Number(body.laborCost   || 0),
+        otherCosts:         Number(body.otherCosts  || 0),
+        discount:           Number(body.discount    || 0),
+        budget:             Number(body.budget      || 0),
+        fuelLevel:          Number(body.fuelLevel   || 0),
+        mileage:            Number(body.mileage     || 0),
+        enteredAt:          body.enteredAt        || new Date().toISOString(),
+        promisedAt:         body.promisedAt       || null
+      };
       const { data, error } = await getSupabaseAdmin().rpc("create_order", {
-        p_workshop_id:      workshopId,
-        p_client_id:        body.clientId,
-        p_vehicle_id:       body.vehicleId,
-        p_mechanic_id:      body.mechanicId || null,
-        p_client_name:      body.clientName || "",
-        p_client_phone:     body.clientPhone || "",
-        p_vehicle_label:    body.vehicleLabel || "",
-        p_plate:            body.plate || "",
-        p_mechanic_name:    body.mechanicName || "Sin asignar",
-        p_priority:         body.priority || "normal",
-        p_customer_complaint: body.customerComplaint || "",
-        p_diagnosis:        body.diagnosis || "",
-        p_inspection_notes: body.inspectionNotes || "",
-        p_fuel_level:       Number(body.fuelLevel || 0),
-        p_mileage:          Number(body.mileage || 0),
-        p_entered_at:       body.enteredAt || new Date().toISOString(),
-        p_promised_at:      body.promisedAt || null,
-        p_budget:           Number(body.budget || 0),
-        p_labor_cost:       Number(body.laborCost || 0),
-        p_other_costs:      Number(body.otherCosts || 0),
-        p_discount:         Number(body.discount || 0),
-        p_service_lines:    body.serviceLines || [],
-        p_approval_status:  body.approvalStatus || "pending",
-        p_payment_status:   body.paymentStatus || "pending"
+        p_workshop_id: workshopId,
+        p_payload:     payload
       });
       if (error) throw Object.assign(new Error(error.message), { status: 502 });
       return send(response, 201, { order: toOrder(data) });
