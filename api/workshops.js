@@ -1,5 +1,5 @@
-import { parseBody, requireAdmin, requireMember, resolveWorkshopId, send } from "../_lib/firebase-admin.js";
-import { getSupabaseAdmin, toWorkshop } from "../_lib/supabase-admin.js";
+import { parseBody, requireAdmin, requireMember, resolveWorkshopId, send } from "./_lib/firebase-admin.js";
+import { getSupabaseAdmin, toWorkshop } from "./_lib/supabase-admin.js";
 
 export default async function handler(request, response) {
   const body = parseBody(request);
@@ -20,12 +20,6 @@ export default async function handler(request, response) {
 
     if (request.method === "PATCH") {
       await requireAdmin(request, workshopId);
-      const allowed = [
-        "business_name", "legal_name", "tax_id", "phone", "email", "address",
-        "currency", "tax_rate", "labor_hour_rate", "daily_goal",
-        "order_prefix", "require_approval", "prevent_negative_stock",
-        "notify_ready", "notify_delay", "terms", "document_footer"
-      ];
       const updates = {};
       if (body.businessName         !== undefined) updates.business_name           = body.businessName;
       if (body.legalName            !== undefined) updates.legal_name              = body.legalName;
