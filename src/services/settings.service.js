@@ -1,10 +1,13 @@
-import { serverTimestamp, setDoc } from "firebase/firestore";
-import { workshopRef } from "../firebase/paths";
+import { apiRequest } from "../lib/apiClient";
+import { useAuth } from "../contexts/AuthContext";
 
-export async function saveWorkshopSettings(payload) {
-  await setDoc(
-    workshopRef(),
-    { ...payload, updatedAt: serverTimestamp() },
-    { merge: true }
-  );
+/**
+ * Guarda la configuración del taller (PATCH /api/workshops).
+ * Reemplaza el antiguo saveWorkshopSettings que usaba setDoc de Firestore.
+ */
+export async function saveWorkshopSettings(payload, workshopId) {
+  return apiRequest("/api/workshops", {
+    method: "PATCH",
+    body: { ...payload, workshopId }
+  });
 }

@@ -16,7 +16,7 @@ async function request(method, body) {
 }
 
 export const usersService = {
-  create: (workshopId, payload) => request("POST", { ...payload, workshopId }),
-  update: (workshopId, payload) => request("PATCH", { ...payload, workshopId }),
+  create:  (workshopId, payload) => request("POST",   { ...payload, workshopId }),
+  update:  (workshopId, payload) => request("PATCH",  { ...payload, workshopId }),
   disable: (workshopId, payload) => request("DELETE", { ...payload, workshopId })
 };

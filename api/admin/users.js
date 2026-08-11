@@ -1,5 +1,6 @@
-import { FieldValue } from "firebase-admin/firestore";
-import { adminAuth, adminDb, parseBody, requireAdmin, resolveWorkshopId, send } from "../_lib/firebase-admin.js";
+import { adminAuth } from "../_lib/firebase-admin.js";
+import { parseBody, requireAdmin, resolveWorkshopId, send } from "../_lib/firebase-admin.js";
+import { createMember, createUserRecord, updateMember } from "../_lib/supabase-admin.js";
 
 function validateRole(role) {
   return ["admin", "advisor", "mechanic", "cashier"].includes(role);
@@ -21,24 +22,13 @@ export default async function handler(request, response) {
       if (!email || !password || !displayName || !validateRole(role)) {
         return send(response, 400, { error: "Correo, contraseña, nombre y rol válido son obligatorios." });
       }
-      const user = await adminAuth().createUser({ email, password, displayName, emailVerified: false, disabled: false });
-      const batch = adminDb().batch();
-      batch.set(adminDb().doc(`workshops/${workshopId}/members/${user.uid}`), {
-        uid: user.uid,
-        email,
-        displayName,
-        role,
-        active: true,
-        createdBy: actor.uid,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp()
+      const user = await adminAuth().createUser({
+        email, password, displayName, emailVerified: false, disabled: false
       });
-      batch.set(adminDb().doc(`users/${user.uid}`), {
-        workshopId,
-        email,
-        createdAt: FieldValue.serverTimestamp()
-      });
-      await batch.commit();
+      await Promise.all([
+        createMember(workshopId, { uid: user.uid, email, displayName, role, createdBy: actor.uid }),
+        createUserRecord(user.uid, workshopId, email)
+      ]);
       return send(response, 201, { uid: user.uid, email, displayName, role });
     }
 
@@ -46,23 +36,26 @@ export default async function handler(request, response) {
     if (!uid) return send(response, 400, { error: "El UID es obligatorio." });
 
     if (request.method === "PATCH") {
-      const updates = {};
-      if (body.email) updates.email = body.email;
-      if (body.displayName) updates.displayName = body.displayName;
-      if (typeof body.disabled === "boolean") updates.disabled = body.disabled;
-      if (Object.keys(updates).length) await adminAuth().updateUser(uid, updates);
-      const memberUpdates = { updatedAt: FieldValue.serverTimestamp() };
-      if (body.email) memberUpdates.email = body.email;
-      if (body.displayName) memberUpdates.displayName = body.displayName;
-      if (body.role && validateRole(body.role)) memberUpdates.role = body.role;
-      if (typeof body.active === "boolean") memberUpdates.active = body.active;
-      await adminDb().doc(`workshops/${workshopId}/members/${uid}`).set(memberUpdates, { merge: true });
+      const authUpdates = {};
+      if (body.email)                           authUpdates.email       = body.email;
+      if (body.displayName)                     authUpdates.displayName = body.displayName;
+      if (typeof body.disabled === "boolean")   authUpdates.disabled    = body.disabled;
+      if (Object.keys(authUpdates).length) await adminAuth().updateUser(uid, authUpdates);
+
+      const memberUpdates = {};
+      if (body.email)                           memberUpdates.email       = body.email;
+      if (body.displayName)                     memberUpdates.displayName = body.displayName;
+      if (body.role && validateRole(body.role)) memberUpdates.role        = body.role;
+      if (typeof body.active === "boolean")     memberUpdates.active      = body.active;
+      await updateMember(workshopId, uid, memberUpdates);
       return send(response, 200, { uid, updated: true });
     }
 
-    if (uid === actor.uid) return send(response, 400, { error: "No puedes desactivar tu propia cuenta." });
+    // DELETE
+    if (uid === actor.uid)
+      return send(response, 400, { error: "No puedes desactivar tu propia cuenta." });
     await adminAuth().updateUser(uid, { disabled: true });
-    await adminDb().doc(`workshops/${workshopId}/members/${uid}`).set({ active: false, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    await updateMember(workshopId, uid, { active: false });
     return send(response, 200, { uid, disabled: true });
   } catch (error) {
     console.error(error);

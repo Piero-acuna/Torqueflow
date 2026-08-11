@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { orderBy } from "firebase/firestore";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { DataTable } from "../../components/common/DataTable";
@@ -11,15 +10,13 @@ import { SectionCard } from "../../components/common/SectionCard";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import { useWorkshop } from "../../contexts/WorkshopContext";
-import { useCollection } from "../../hooks/useCollection";
+import { useSupabaseCollection } from "../../hooks/useSupabaseCollection";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { normalizeText, formatMoney, formatDate } from "../../lib/formatters";
-import { partsRef } from "../../services/inventory.service";
 import {
   addExternalJob,
   addPartToOrder,
   changeOrderStatus,
-  ordersRef,
   removeExternalJob,
   removePartFromOrder,
   updateOrder
@@ -27,7 +24,9 @@ import {
 import { ORDER_PRIORITIES, ORDER_STATUSES, PAYMENT_STATUSES } from "../../config/constants";
 import { navigate } from "../../hooks/useHashRoute";
 
-const KANBAN_STATUSES = ORDER_STATUSES.filter((item) => ["review", "waiting_parts", "external", "ready"].includes(item.value));
+const KANBAN_STATUSES = ORDER_STATUSES.filter((item) =>
+  ["review", "waiting_parts", "external", "ready"].includes(item.value)
+);
 const statusMap = Object.fromEntries(ORDER_STATUSES.map((item) => [item.value, item.label]));
 
 function queryValue(name) {
@@ -43,22 +42,31 @@ function orderTone(status) {
 }
 
 export function OrdersPage() {
-  const { user } = useAuth();
+  const { user, workshopId } = useAuth();
   const { showToast } = useToast();
   const { workshop } = useWorkshop();
-  const orderCollection = useMemo(() => ordersRef(), []);
-  const partCollection = useMemo(() => partsRef(), []);
-  const { data: orders, loading } = useCollection(orderCollection, orderBy("createdAt", "desc"));
-  const { data: parts } = useCollection(partCollection, orderBy("name", "asc"));
-  const [view, setView] = useState("kanban");
-  const [search, setSearch] = useState(() => queryValue("search"));
+
+  // Supabase Realtime — reemplaza useCollection + Firebase onSnapshot
+  const { data: rawOrders, loading } = useSupabaseCollection("orders", workshopId, {
+    orderBy: { column: "created_at", ascending: false }
+  });
+  const { data: rawParts } = useSupabaseCollection("parts", workshopId, {
+    orderBy: { column: "name", ascending: true }
+  });
+
+  // Transformar snake_case de Supabase a camelCase para compatibilidad
+  const orders = useMemo(() => rawOrders.map(toOrder), [rawOrders]);
+  const parts  = useMemo(() => rawParts.map(toPart),   [rawParts]);
+
+  const [view, setView]               = useState("kanban");
+  const [search, setSearch]           = useState(() => queryValue("search"));
   const [statusFilter, setStatusFilter] = useState("active");
-  const debouncedSearch = useDebouncedValue(search);
-  const [selected, setSelected] = useState(null);
-  const [editForm, setEditForm] = useState({});
-  const [tab, setTab] = useState("summary");
-  const [saving, setSaving] = useState(false);
-  const [partForm, setPartForm] = useState({ partId: "", quantity: 1, unitPrice: 0 });
+  const debouncedSearch               = useDebouncedValue(search);
+  const [selected, setSelected]       = useState(null);
+  const [editForm, setEditForm]       = useState({});
+  const [tab, setTab]                 = useState("summary");
+  const [saving, setSaving]           = useState(false);
+  const [partForm, setPartForm]       = useState({ partId: "", quantity: 1, unitPrice: 0 });
   const [externalForm, setExternalForm] = useState({ provider: "", description: "", sentAt: "", returnedAt: "", cost: 0, status: "sent" });
 
   useEffect(() => {
@@ -79,19 +87,19 @@ export function OrdersPage() {
   function openOrder(order) {
     setSelected(order);
     setEditForm({
-      diagnosis: order.diagnosis || "",
-      customerComplaint: order.customerComplaint || "",
-      mechanicId: order.mechanicId || "",
-      mechanicName: order.mechanicName || "Sin asignar",
-      priority: order.priority || "normal",
-      promisedAt: order.promisedAt || "",
-      budget: Number(order.budget || 0),
-      laborCost: Number(order.laborCost || 0),
-      otherCosts: Number(order.otherCosts || 0),
-      discount: Number(order.discount || 0),
-      paymentStatus: order.paymentStatus || "pending",
-      approvalStatus: order.approvalStatus || "pending",
-      internalNotes: order.internalNotes || ""
+      diagnosis:         order.diagnosis         || "",
+      customerComplaint: order.customerComplaint  || "",
+      mechanicId:        order.mechanicId         || "",
+      mechanicName:      order.mechanicName       || "Sin asignar",
+      priority:          order.priority           || "normal",
+      promisedAt:        order.promisedAt         || "",
+      budget:            Number(order.budget      || 0),
+      laborCost:         Number(order.laborCost   || 0),
+      otherCosts:        Number(order.otherCosts  || 0),
+      discount:          Number(order.discount    || 0),
+      paymentStatus:     order.paymentStatus      || "pending",
+      approvalStatus:    order.approvalStatus     || "pending",
+      internalNotes:     order.internalNotes      || ""
     });
     setTab("summary");
     setPartForm({ partId: "", quantity: 1, unitPrice: 0 });
@@ -102,7 +110,7 @@ export function OrdersPage() {
     if (!selected) return;
     setSaving(true);
     try {
-      await updateOrder(selected.id, editForm, user);
+      await updateOrder(selected.id, editForm, user, workshopId);
       showToast("Orden actualizada.");
       setSelected(null);
     } catch (error) {
@@ -114,7 +122,7 @@ export function OrdersPage() {
 
   async function moveStatus(orderId, status) {
     try {
-      await changeOrderStatus(orderId, status, user);
+      await changeOrderStatus(orderId, status, user, workshopId);
       showToast(`Estado actualizado a ${statusMap[status]}.`);
     } catch (error) {
       showToast(error.message, "error");
@@ -127,7 +135,7 @@ export function OrdersPage() {
     if (!partForm.partId) return showToast("Selecciona un repuesto.", "error");
     setSaving(true);
     try {
-      await addPartToOrder(selected.id, partForm, user);
+      await addPartToOrder(selected.id, partForm, user, workshopId);
       showToast("Repuesto agregado y stock descontado.");
       setPartForm({ partId: "", quantity: 1, unitPrice: 0 });
     } catch (error) {
@@ -141,7 +149,7 @@ export function OrdersPage() {
     if (!selected) return;
     setSaving(true);
     try {
-      await removePartFromOrder(selected.id, lineId, user);
+      await removePartFromOrder(selected.id, lineId, user, workshopId);
       showToast("Repuesto retirado y devuelto al stock.");
     } catch (error) {
       showToast(error.message, "error");
@@ -156,7 +164,7 @@ export function OrdersPage() {
     if (!externalForm.description.trim()) return showToast("Describe el trabajo externo.", "error");
     setSaving(true);
     try {
-      await addExternalJob(selected.id, externalForm, user);
+      await addExternalJob(selected.id, externalForm, user, workshopId);
       showToast("Trabajo externo registrado.");
       setExternalForm({ provider: "", description: "", sentAt: "", returnedAt: "", cost: 0, status: "sent" });
     } catch (error) {
@@ -169,7 +177,7 @@ export function OrdersPage() {
   async function removeExternal(jobId) {
     if (!selected) return;
     try {
-      await removeExternalJob(selected.id, jobId, user);
+      await removeExternalJob(selected.id, jobId, user, workshopId);
       showToast("Trabajo externo eliminado.");
     } catch (error) {
       showToast(error.message, "error");
@@ -178,23 +186,36 @@ export function OrdersPage() {
 
   const columns = [
     { key: "orderNumber", label: "Orden", render: (row) => <div className="cell-main"><strong>{row.orderNumber}</strong><small>{formatDate(row.createdAt, { withTime: true })}</small></div> },
-    { key: "vehicle", label: "Vehículo", render: (row) => <div className="cell-main"><strong>{row.plate || "Sin placa"}</strong><small>{row.vehicleLabel}</small></div> },
+    { key: "vehicle",     label: "Vehículo", render: (row) => <div className="cell-main"><strong>{row.plate || "Sin placa"}</strong><small>{row.vehicleLabel}</small></div> },
     { key: "clientName", label: "Cliente" },
-    { key: "status", label: "Estado", render: (row) => <Badge tone={orderTone(row.status)}>{statusMap[row.status] || row.status}</Badge> },
+    { key: "status",      label: "Estado", render: (row) => <Badge tone={orderTone(row.status)}>{statusMap[row.status] || row.status}</Badge> },
     { key: "mechanicName", label: "Mecánico" },
     { key: "total", label: "Total", render: (row) => <strong>{formatMoney(row.totals?.total || 0, workshop.currency)}</strong> }
   ];
 
+  // Mantener el modal sincronizado con los cambios en tiempo real de Supabase
   const freshSelected = selected ? orders.find((item) => item.id === selected.id) || selected : null;
 
   return (
     <>
-      <PageHeader eyebrow="Control del taller" title="Órdenes de trabajo" description="Tablero operativo, costos, repuestos y trabajos externos en tiempo real." actions={<Button type="button" onClick={() => navigate("/orders/new")}>+ Nueva orden</Button>} />
+      <PageHeader
+        eyebrow="Control del taller"
+        title="Órdenes de trabajo"
+        description="Tablero operativo, costos, repuestos y trabajos externos en tiempo real."
+        actions={<Button type="button" onClick={() => navigate("/orders/new")}>+ Nueva orden</Button>}
+      />
 
       <div className="toolbar toolbar--wrap">
         <div className="search-box"><span>⌕</span><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Orden, placa, cliente, vehículo o mecánico" /></div>
-        <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="active">Órdenes activas</option><option value="all">Todos los estados</option>{ORDER_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select>
-        <div className="segmented"><button type="button" className={view === "kanban" ? "is-active" : ""} onClick={() => setView("kanban")}>Kanban</button><button type="button" className={view === "table" ? "is-active" : ""} onClick={() => setView("table")}>Tabla</button></div>
+        <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+          <option value="active">Órdenes activas</option>
+          <option value="all">Todos los estados</option>
+          {ORDER_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+        </Select>
+        <div className="segmented">
+          <button type="button" className={view === "kanban" ? "is-active" : ""} onClick={() => setView("kanban")}>Kanban</button>
+          <button type="button" className={view === "table"  ? "is-active" : ""} onClick={() => setView("table")}>Tabla</button>
+        </div>
         <span className="toolbar__count">{filtered.length} órdenes</span>
       </div>
 
@@ -227,7 +248,12 @@ export function OrdersPage() {
           })}
         </div>
       ) : <SectionCard><DataTable columns={columns} rows={filtered} onRowClick={openOrder} /></SectionCard> : (
-        <EmptyState title={loading ? "Cargando órdenes…" : "No hay órdenes de trabajo"} description="El sistema está limpio. Crea la primera orden para iniciar el tablero." actionLabel="Crear orden" onAction={() => navigate("/orders/new")} />
+        <EmptyState
+          title={loading ? "Cargando órdenes…" : "No hay órdenes de trabajo"}
+          description="El sistema está limpio. Crea la primera orden para iniciar el tablero."
+          actionLabel="Crear orden"
+          onAction={() => navigate("/orders/new")}
+        />
       )}
 
       <Modal
@@ -236,12 +262,22 @@ export function OrdersPage() {
         title={freshSelected?.orderNumber || "Orden de trabajo"}
         subtitle={`${freshSelected?.plate || "Sin placa"} · ${freshSelected?.clientName || "Cliente"}`}
         size="xl"
-        footer={<><Button variant="ghost" type="button" onClick={() => setSelected(null)}>Cerrar</Button><Button type="button" disabled={saving} onClick={saveOrder}>{saving ? "Guardando…" : "Guardar cambios"}</Button></>}
+        footer={
+          <>
+            <Button variant="ghost" type="button" onClick={() => setSelected(null)}>Cerrar</Button>
+            <Button type="button" disabled={saving} onClick={saveOrder}>{saving ? "Guardando…" : "Guardar cambios"}</Button>
+          </>
+        }
       >
         {freshSelected ? (
           <>
             <div className="modal-tabs">
-              {[{ id: "summary", label: "Resumen" }, { id: "parts", label: `Piezas (${freshSelected.partLines?.length || 0})` }, { id: "external", label: `Externos (${freshSelected.externalJobs?.length || 0})` }, { id: "activity", label: "Actividad" }].map((item) => <button type="button" key={item.id} className={tab === item.id ? "is-active" : ""} onClick={() => setTab(item.id)}>{item.label}</button>)}
+              {[
+                { id: "summary",  label: "Resumen" },
+                { id: "parts",    label: `Piezas (${freshSelected.partLines?.length || 0})` },
+                { id: "external", label: `Externos (${freshSelected.externalJobs?.length || 0})` },
+                { id: "activity", label: "Actividad" }
+              ].map((item) => <button type="button" key={item.id} className={tab === item.id ? "is-active" : ""} onClick={() => setTab(item.id)}>{item.label}</button>)}
             </div>
 
             {tab === "summary" ? (
@@ -262,9 +298,9 @@ export function OrdersPage() {
                 <aside className="cost-summary">
                   <h3>Resumen de costos</h3>
                   <div><span>Servicios</span><strong>{formatMoney(freshSelected.totals?.services || 0, workshop.currency)}</strong></div>
-                  <div><span>Repuestos</span><strong>{formatMoney(freshSelected.totals?.parts || 0, workshop.currency)}</strong></div>
-                  <div><span>Externos</span><strong>{formatMoney(freshSelected.totals?.external || 0, workshop.currency)}</strong></div>
-                  <div><span>Mano de obra</span><strong>{formatMoney(freshSelected.totals?.labor || 0, workshop.currency)}</strong></div>
+                  <div><span>Repuestos</span><strong>{formatMoney(freshSelected.totals?.parts    || 0, workshop.currency)}</strong></div>
+                  <div><span>Externos</span><strong>{formatMoney(freshSelected.totals?.external  || 0, workshop.currency)}</strong></div>
+                  <div><span>Mano de obra</span><strong>{formatMoney(freshSelected.totals?.labor  || 0, workshop.currency)}</strong></div>
                   <div className="cost-summary__total"><span>Total actual</span><strong>{formatMoney(freshSelected.totals?.total || 0, workshop.currency)}</strong></div>
                   <small>El total se recalcula al guardar o modificar piezas y externos.</small>
                 </aside>
@@ -274,7 +310,10 @@ export function OrdersPage() {
             {tab === "parts" ? (
               <div className="editor-section">
                 <form className="inline-form inline-form--4" onSubmit={addPart}>
-                  <Select value={partForm.partId} onChange={(event) => { const part = parts.find((item) => item.id === event.target.value); setPartForm({ ...partForm, partId: event.target.value, unitPrice: Number(part?.salePrice || 0) }); }}><option value="">Seleccionar repuesto</option>{parts.filter((part) => part.active !== false).map((part) => <option key={part.id} value={part.id}>{part.sku} · {part.name} · stock {part.stock || 0}</option>)}</Select>
+                  <Select value={partForm.partId} onChange={(event) => { const part = parts.find((item) => item.id === event.target.value); setPartForm({ ...partForm, partId: event.target.value, unitPrice: Number(part?.salePrice || 0) }); }}>
+                    <option value="">Seleccionar repuesto</option>
+                    {parts.filter((part) => part.active !== false).map((part) => <option key={part.id} value={part.id}>{part.sku} · {part.name} · stock {part.stock || 0}</option>)}
+                  </Select>
                   <Input type="number" min="1" step="1" value={partForm.quantity} onChange={(event) => setPartForm({ ...partForm, quantity: Number(event.target.value) })} placeholder="Cantidad" />
                   <Input type="number" min="0" step="0.01" value={partForm.unitPrice} onChange={(event) => setPartForm({ ...partForm, unitPrice: Number(event.target.value) })} placeholder="Precio unitario" />
                   <Button type="submit" disabled={saving}>Agregar pieza</Button>
@@ -321,4 +360,66 @@ export function OrdersPage() {
       </Modal>
     </>
   );
+}
+
+// ── Transformadores snake_case → camelCase (Supabase devuelve snake_case) ──
+function toOrder(row) {
+  if (!row) return null;
+  return {
+    id:                row.id,
+    workshopId:        row.workshop_id,
+    orderNumber:       row.order_number,
+    sequence:          row.sequence,
+    clientId:          row.client_id,
+    vehicleId:         row.vehicle_id,
+    mechanicId:        row.mechanic_id,
+    clientName:        row.client_name,
+    clientPhone:       row.client_phone,
+    vehicleLabel:      row.vehicle_label,
+    plate:             row.plate,
+    mechanicName:      row.mechanic_name,
+    status:            row.status,
+    priority:          row.priority,
+    paymentStatus:     row.payment_status,
+    approvalStatus:    row.approval_status,
+    customerComplaint: row.customer_complaint,
+    diagnosis:         row.diagnosis,
+    internalNotes:     row.internal_notes,
+    serviceLines:      row.service_lines  || [],
+    partLines:         row.part_lines     || [],
+    externalJobs:      row.external_jobs  || [],
+    photoEvidence:     row.photo_evidence || [],
+    timeline:          row.timeline       || [],
+    laborCost:         row.labor_cost,
+    otherCosts:        row.other_costs,
+    discount:          row.discount,
+    budget:            row.budget,
+    totals:            row.totals         || {},
+    fuelLevel:         row.fuel_level,
+    mileage:           row.mileage,
+    promisedAt:        row.promised_at,
+    enteredAt:         row.entered_at,
+    completedAt:       row.completed_at,
+    createdBy:         row.created_by,
+    active:            row.active,
+    createdAt:         row.created_at,
+    updatedAt:         row.updated_at
+  };
+}
+
+function toPart(row) {
+  if (!row) return null;
+  return {
+    id:          row.id,
+    sku:         row.sku,
+    barcode:     row.barcode,
+    name:        row.name,
+    brand:       row.brand,
+    category:    row.category,
+    stock:       row.stock,
+    averageCost: row.average_cost,
+    salePrice:   row.sale_price,
+    minimumStock: row.minimum_stock,
+    active:      row.active
+  };
 }

@@ -1,56 +1,97 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { getDoc } from "firebase/firestore";
-import { auth, setWorkshopId } from "../firebase/client";
-import { memberRef, userRef } from "../firebase/paths";
+import {
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signOut
+} from "firebase/auth";
+import { auth } from "../firebase/client";
 import { firebaseErrorMessage } from "../firebase/errors";
-import { clearAttempts, getLockoutStatus, registerFailedAttempt, formatRemaining } from "../lib/loginAttempts";
+import {
+  clearAttempts,
+  formatRemaining,
+  getLockoutStatus,
+  registerFailedAttempt
+} from "../lib/loginAttempts";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [member, setMember] = useState(null);
+  const [user, setUser]               = useState(null);
+  const [member, setMember]           = useState(null);
   const [workshopId, setWorkshopIdState] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [workshop, setWorkshop]       = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState("");
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
       setUser(nextUser);
       setError("");
+
       if (!nextUser) {
         setMember(null);
-        setWorkshopId(null);
         setWorkshopIdState("");
+        setWorkshop(null);
         setLoading(false);
         return;
       }
+
       try {
-        // Cada usuario pertenece a un único taller, resuelto vía el
-        // documento users/{uid} (lo escribe el backend al registrar el
-        // taller o al invitar a alguien, nunca el cliente). Sin ese
-        // documento no hay forma de saber qué taller consultar: se trata
-        // igual que "acceso pendiente".
-        const userSnapshot = await getDoc(userRef(nextUser.uid));
-        if (!userSnapshot.exists() || !userSnapshot.data().workshopId) {
-          setWorkshopId(null);
-          setWorkshopIdState("");
+        // Obtiene el workshopId y los datos del miembro desde el backend
+        // (que consulta Supabase). No toca Firestore en absoluto.
+        const token = await nextUser.getIdToken();
+
+        // Primero necesitamos el workshopId; lo obtenemos desde la tabla users
+        // de Supabase consultando /api/auth/session sin workshopId (bootstrap).
+        // Para esto usamos un endpoint ligero que solo resuelve el uid -> workshopId.
+        const userRes = await fetch("/api/auth/user", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!userRes.ok) {
           setMember(null);
+          setWorkshopIdState("");
+          setWorkshop(null);
           setLoading(false);
           return;
         }
-        const resolvedWorkshopId = userSnapshot.data().workshopId;
-        setWorkshopId(resolvedWorkshopId);
-        setWorkshopIdState(resolvedWorkshopId);
 
-        const snapshot = await getDoc(memberRef(nextUser.uid));
-        const memberData = snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
-        setMember(memberData);
-        if (memberData?.active !== false) clearAttempts(nextUser.email);
-      } catch (memberError) {
-        setError(firebaseErrorMessage(memberError));
+        const { workshopId: resolvedWorkshopId } = await userRes.json();
+        if (!resolvedWorkshopId) {
+          setMember(null);
+          setWorkshopIdState("");
+          setWorkshop(null);
+          setLoading(false);
+          return;
+        }
+
+        // Ahora obtenemos los datos completos del taller y del miembro.
+        const sessionRes = await fetch(
+          `/api/auth/session?workshopId=${resolvedWorkshopId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (!sessionRes.ok) {
+          setMember(null);
+          setWorkshopIdState("");
+          setWorkshop(null);
+          setLoading(false);
+          return;
+        }
+
+        const session = await sessionRes.json();
+        setWorkshopIdState(session.workshopId);
+        setMember(session.member);
+        setWorkshop(session.workshop);
+
+        if (session.member?.active !== false) {
+          clearAttempts(nextUser.email);
+        }
+      } catch (sessionError) {
+        setError(firebaseErrorMessage(sessionError));
         setMember(null);
+        setWorkshop(null);
       } finally {
         setLoading(false);
       }
@@ -113,8 +154,20 @@ export function AuthProvider({ children }) {
   }
 
   const value = useMemo(
-    () => ({ user, member, workshopId, loading, error, login, logout, register, resetPassword, isAdmin: member?.role === "admin" }),
-    [user, member, workshopId, loading, error]
+    () => ({
+      user,
+      member,
+      workshop,
+      workshopId,
+      loading,
+      error,
+      login,
+      logout,
+      register,
+      resetPassword,
+      isAdmin: member?.role === "admin"
+    }),
+    [user, member, workshop, workshopId, loading, error]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,21 +1,19 @@
-import { FieldValue } from "firebase-admin/firestore";
-import { adminAuth, adminDb, parseBody, send } from "../_lib/firebase-admin.js";
+import { parseBody, send } from "../_lib/firebase-admin.js";
+import { adminAuth } from "../_lib/firebase-admin.js";
+import { getSupabaseAdmin } from "../_lib/supabase-admin.js";
 
-// Endpoint público (sin requireMember): así es como nace un taller nuevo, no
-// puede exigir membresía de algo que todavía no existe. La seguridad acá es
-// distinta: valida los datos de entrada, evita duplicar correos, y hace
-// limpieza si algo falla a mitad de camino para no dejar un usuario de Auth
-// huérfano sin taller.
+// Endpoint público (sin requireMember): así es como nace un taller nuevo.
+// La seguridad acá valida los datos de entrada y evita duplicar correos.
 
 function validate(body) {
   const workshopName = (body.workshopName || "").trim();
-  const ownerName = (body.ownerName || "").trim();
-  const email = (body.email || "").trim();
-  const password = body.password || "";
+  const ownerName    = (body.ownerName    || "").trim();
+  const email        = (body.email        || "").trim();
+  const password     = body.password      || "";
   if (!workshopName) return "El nombre del taller es obligatorio.";
-  if (!ownerName) return "Tu nombre es obligatorio.";
+  if (!ownerName)    return "Tu nombre es obligatorio.";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "El correo no es válido.";
-  if (password.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
+  if (password.length < 8)  return "La contraseña debe tener al menos 8 caracteres.";
   return null;
 }
 
@@ -30,12 +28,13 @@ export default async function handler(request, response) {
   if (validationError) return send(response, 400, { error: validationError });
 
   const workshopName = body.workshopName.trim();
-  const ownerName = body.ownerName.trim();
-  const email = body.email.trim();
+  const ownerName    = body.ownerName.trim();
+  const email        = body.email.trim();
   const { password } = body;
 
   let createdUser = null;
   try {
+    // Verificar que el correo no esté tomado
     try {
       await adminAuth().getUserByEmail(email);
       return send(response, 409, { error: "Ya existe una cuenta con ese correo." });
@@ -43,6 +42,7 @@ export default async function handler(request, response) {
       if (lookupError.code !== "auth/user-not-found") throw lookupError;
     }
 
+    // Crear usuario en Firebase Auth
     createdUser = await adminAuth().createUser({
       email,
       password,
@@ -51,57 +51,66 @@ export default async function handler(request, response) {
       disabled: false
     });
 
-    const workshopRef = adminDb().collection("workshops").doc();
-    const workshopId = workshopRef.id;
-    const batch = adminDb().batch();
+    const supabase = getSupabaseAdmin();
 
-    batch.set(workshopRef, {
-      businessName: workshopName,
-      legalName: "",
-      taxId: "",
-      phone: "",
-      email: "",
-      address: "",
-      currency: "PEN",
-      taxRate: 18,
-      laborHourRate: 0,
-      dailyGoal: 0,
-      orderPrefix: "OT",
-      nextOrderNumber: 1,
-      requireApproval: true,
-      preventNegativeStock: true,
-      notifyReady: true,
-      notifyDelay: true,
-      active: true,
-      ownerUid: createdUser.uid,
-      initializedAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp()
-    });
+    // Insertar taller en Supabase
+    const { data: workshop, error: workshopError } = await supabase
+      .from("workshops")
+      .insert({
+        business_name:          workshopName,
+        legal_name:             "",
+        tax_id:                 "",
+        phone:                  "",
+        email:                  "",
+        address:                "",
+        currency:               "PEN",
+        tax_rate:               18,
+        labor_hour_rate:        0,
+        daily_goal:             0,
+        order_prefix:           "OT",
+        next_order_number:      1,
+        require_approval:       true,
+        prevent_negative_stock: true,
+        notify_ready:           true,
+        notify_delay:           true,
+        active:                 true,
+        owner_uid:              createdUser.uid
+      })
+      .select("id")
+      .single();
 
-    batch.set(workshopRef.collection("members").doc(createdUser.uid), {
-      uid: createdUser.uid,
-      email,
-      displayName: ownerName,
-      role: "admin",
-      active: true,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp()
-    });
+    if (workshopError) throw workshopError;
+    const workshopId = workshop.id;
 
-    batch.set(adminDb().doc(`users/${createdUser.uid}`), {
-      workshopId,
-      email,
-      createdAt: FieldValue.serverTimestamp()
-    });
+    // Insertar miembro (admin) y user (mapeo uid → workshopId)
+    const [{ error: memberError }, { error: userError }] = await Promise.all([
+      supabase.from("members").insert({
+        workshop_id:  workshopId,
+        uid:          createdUser.uid,
+        email,
+        display_name: ownerName,
+        role:         "admin",
+        active:       true
+      }),
+      supabase.from("users").insert({
+        uid:         createdUser.uid,
+        workshop_id: workshopId,
+        email
+      })
+    ]);
 
-    await batch.commit();
+    if (memberError) throw memberError;
+    if (userError)   throw userError;
 
     return send(response, 201, { workshopId, uid: createdUser.uid });
   } catch (error) {
     console.error(error);
+    // Limpiar el usuario de Firebase Auth si algo falló después de crearlo
     if (createdUser) {
       await adminAuth().deleteUser(createdUser.uid).catch(() => {});
     }
-    return send(response, error.status || 500, { error: error.message || "No se pudo completar el registro." });
+    return send(response, error.status || 500, {
+      error: error.message || "No se pudo completar el registro."
+    });
   }
 }

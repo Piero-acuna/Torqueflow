@@ -1,31 +1,46 @@
 import { auth } from "../firebase/client";
 
 /**
- * fetch() autenticado hacia las funciones serverless en /api. Adjunta el ID
- * token de Firebase Auth como Bearer; el backend valida ese token y la
- * membresía del taller antes de tocar Firestore o Data Connect.
+ * Cliente HTTP para llamar a los endpoints de Vercel (/api/...).
+ * Inyecta automáticamente:
+ *  - Authorization: Bearer <firebase-id-token>
+ *  - Content-Type: application/json
+ *
+ * Para las rutas GET, los parámetros van en la URL (no en body).
+ * Para POST/PATCH/DELETE, el body se envía como JSON.
  */
-export async function apiRequest(path, { method = "GET", body, params } = {}) {
-  const token = await auth.currentUser?.getIdToken();
-  if (!token) throw new Error("Sesión no válida. Vuelve a iniciar sesión.");
+export async function apiRequest(path, options = {}) {
+  const { method = "GET", body, params } = options;
 
-  const url = new URL(path, window.location.origin);
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, value);
-    });
+  const token = await auth.currentUser?.getIdToken();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
+
+  let url = path;
+  if (params && method === "GET") {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== undefined && v !== null)
+    ).toString();
+    if (qs) url += `?${qs}`;
   }
 
-  const response = await fetch(url.toString(), {
+  const response = await fetch(url, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined
+    headers,
+    ...(body && method !== "GET" ? { body: JSON.stringify(body) } : {})
   });
 
+  // Intentar parsear el cuerpo incluso en errores
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || "No se pudo completar la solicitud.");
+
+  if (!response.ok) {
+    throw Object.assign(
+      new Error(payload.error || `Error ${response.status}`),
+      { status: response.status, payload }
+    );
+  }
+
   return payload;
 }

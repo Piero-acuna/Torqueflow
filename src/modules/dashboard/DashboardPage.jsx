@@ -1,13 +1,11 @@
 import { useMemo } from "react";
-import { orderBy } from "firebase/firestore";
 import { PageHeader } from "../../components/common/PageHeader";
 import { StatCard } from "../../components/common/StatCard";
 import { SectionCard } from "../../components/common/SectionCard";
 import { EmptyState } from "../../components/common/EmptyState";
 import { Badge } from "../../components/common/Badge";
-import { useCollection } from "../../hooks/useCollection";
-import { ordersRef } from "../../services/orders.service";
-import { partsRef } from "../../services/inventory.service";
+import { useAuth } from "../../contexts/AuthContext";
+import { useSupabaseCollection } from "../../hooks/useSupabaseCollection";
 import { useClients } from "../../services/clients.service";
 import { formatDate, formatMoney } from "../../lib/formatters";
 import { useWorkshop } from "../../contexts/WorkshopContext";
@@ -15,37 +13,58 @@ import { navigate } from "../../hooks/useHashRoute";
 
 const ACTIVE = new Set(["review", "waiting_parts", "external", "ready"]);
 
+function toOrder(row) {
+  return {
+    id:           row.id,
+    orderNumber:  row.order_number,
+    plate:        row.plate,
+    vehicleLabel: row.vehicle_label,
+    clientName:   row.client_name,
+    status:       row.status,
+    promisedAt:   row.promised_at,
+    budget:       row.budget,
+    totals:       row.totals || {},
+    createdAt:    row.created_at
+  };
+}
+
 export function DashboardPage() {
+  const { workshopId } = useAuth();
   const { workshop } = useWorkshop();
-  const orderCollection = useMemo(() => ordersRef(), []);
-  const partCollection = useMemo(() => partsRef(), []);
-  const { data: orders, loading } = useCollection(orderCollection, orderBy("createdAt", "desc"));
-  const { data: parts } = useCollection(partCollection, orderBy("name", "asc"));
+  const { data: rawOrders, loading } = useSupabaseCollection("orders", workshopId, {
+    orderBy: { column: "created_at", ascending: false }
+  });
+  const { data: rawParts } = useSupabaseCollection("parts", workshopId, {
+    orderBy: { column: "name", ascending: true }
+  });
   const { data: clients = [] } = useClients();
 
-  const activeOrders = orders.filter((order) => ACTIVE.has(order.status));
-  const readyOrders = orders.filter((order) => order.status === "ready");
+  const orders = useMemo(() => rawOrders.map(toOrder), [rawOrders]);
+  const parts  = rawParts;
+
+  const activeOrders  = orders.filter((order) => ACTIVE.has(order.status));
+  const readyOrders   = orders.filter((order) => order.status === "ready");
   const delayedOrders = activeOrders.filter((order) => order.promisedAt && new Date(order.promisedAt) < new Date());
-  const lowStock = parts.filter((part) => Number(part.stock || 0) <= Number(part.minimumStock || 0));
-  const projected = activeOrders.reduce((sum, order) => sum + Number(order.totals?.total || order.budget || 0), 0);
-  const billed = orders.filter((order) => order.status === "delivered").reduce((sum, order) => sum + Number(order.totals?.total || 0), 0);
-  const goal = Number(workshop.dailyGoal || 0);
-  const goalPercent = goal > 0 ? Math.min(100, (billed / goal) * 100) : 0;
+  const lowStock      = parts.filter((part) => Number(part.stock || 0) <= Number(part.minimum_stock || 0));
+  const projected     = activeOrders.reduce((sum, order) => sum + Number(order.totals?.total || order.budget || 0), 0);
+  const billed        = orders.filter((order) => order.status === "delivered").reduce((sum, order) => sum + Number(order.totals?.total || 0), 0);
+  const goal          = Number(workshop.dailyGoal || 0);
+  const goalPercent   = goal > 0 ? Math.min(100, (billed / goal) * 100) : 0;
 
   return (
     <>
       <PageHeader
         eyebrow="Centro de mando"
         title="Dashboard"
-        description="Resumen operativo y financiero actualizado desde Firestore."
+        description="Resumen operativo y financiero en tiempo real con Supabase Realtime."
         actions={<button className="button button--primary" type="button" onClick={() => navigate("/orders/new")}>+ Nueva orden</button>}
       />
 
       <div className="stats-grid">
-        <StatCard label="Órdenes activas" value={activeOrders.length} detail="En proceso actual" tone="blue" icon="▤" />
-        <StatCard label="Vehículos listos" value={readyOrders.length} detail="Pendientes de entrega" tone="green" icon="✓" />
-        <StatCard label="Demorados" value={delayedOrders.length} detail="Superaron la promesa" tone="orange" icon="!" />
-        <StatCard label="Clientes" value={clients.length} detail="Registrados en el taller" tone="purple" icon="◎" />
+        <StatCard label="Órdenes activas"     value={activeOrders.length}  detail="En proceso actual"     tone="blue"   icon="▤" />
+        <StatCard label="Vehículos listos"    value={readyOrders.length}   detail="Pendientes de entrega" tone="green"  icon="✓" />
+        <StatCard label="Demorados"           value={delayedOrders.length} detail="Superaron la promesa"  tone="orange" icon="!" />
+        <StatCard label="Clientes"            value={clients.length}       detail="Registrados en el taller" tone="purple" icon="◎" />
       </div>
 
       <div className="dashboard-grid">
@@ -72,7 +91,7 @@ export function DashboardPage() {
             {lowStock.slice(0, 3).map((part) => (
               <button type="button" key={part.id} className="alert-row" onClick={() => navigate("/parts")}>
                 <span className="alert-row__icon alert-row__icon--red">↓</span>
-                <div><strong>{part.name}</strong><small>Stock: {part.stock || 0} · mínimo: {part.minimumStock || 0}</small></div>
+                <div><strong>{part.name}</strong><small>Stock: {part.stock || 0} · mínimo: {part.minimum_stock || 0}</small></div>
               </button>
             ))}
             {!delayedOrders.length && !lowStock.length ? <EmptyState title="Sin alertas" description="No hay retrasos ni repuestos bajo mínimo." /> : null}
@@ -93,7 +112,12 @@ export function DashboardPage() {
             ))}
           </div>
         ) : (
-          <EmptyState title={loading ? "Cargando órdenes…" : "Todavía no hay órdenes"} description="Registra la primera orden de trabajo para empezar a operar." actionLabel="Crear primera orden" onAction={() => navigate("/orders/new")} />
+          <EmptyState
+            title={loading ? "Cargando órdenes…" : "Todavía no hay órdenes"}
+            description="Registra la primera orden de trabajo para empezar a operar."
+            actionLabel="Crear primera orden"
+            onAction={() => navigate("/orders/new")}
+          />
         )}
       </SectionCard>
     </>
