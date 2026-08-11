@@ -1,5 +1,4 @@
-import { useMemo, useState } from "react";
-import { orderBy } from "firebase/firestore";
+import { useState } from "react";
 import { Badge } from "../../components/common/Badge";
 import { Button } from "../../components/common/Button";
 import { DataTable } from "../../components/common/DataTable";
@@ -11,17 +10,12 @@ import { SectionCard } from "../../components/common/SectionCard";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import { useWorkshop } from "../../contexts/WorkshopContext";
-import { useCollection } from "../../hooks/useCollection";
+import { useSupabaseCollection } from "../../hooks/useSupabaseCollection";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { stockState } from "../../lib/calculations";
 import { formatDate, formatMoney, normalizeText } from "../../lib/formatters";
 import { validatePart } from "../../lib/validators";
-import {
-  partsRef,
-  partsService,
-  registerStockMovement,
-  stockMovementsRef
-} from "../../services/inventory.service";
+import { partsService, registerStockMovement } from "../../services/inventory.service";
 import { STOCK_MOVEMENT_TYPES } from "../../config/constants";
 import { downloadCsv } from "../../utils/csv";
 
@@ -61,13 +55,34 @@ function stockBadge(part) {
 }
 
 export function PartsPage() {
-  const { user } = useAuth();
+  const { user, workshopId } = useAuth();
   const { workshop } = useWorkshop();
   const { showToast } = useToast();
-  const partCollection = useMemo(() => partsRef(), []);
-  const movementCollection = useMemo(() => stockMovementsRef(), []);
-  const { data: parts, loading } = useCollection(partCollection, orderBy("name", "asc"));
-  const { data: movements } = useCollection(movementCollection, orderBy("createdAt", "desc"));
+
+  // Supabase Realtime — reemplaza useCollection + partsRef / stockMovementsRef
+  const { data: rawParts, loading } = useSupabaseCollection("parts", workshopId, {
+    orderBy: { column: "name", ascending: true }
+  });
+  const { data: rawMovements } = useSupabaseCollection("stock_movements", workshopId, {
+    orderBy: { column: "created_at", ascending: false }
+  });
+
+  // Normalizar snake_case → camelCase para compatibilidad con helpers existentes
+  const parts = rawParts.map((row) => ({
+    ...row,
+    minimumStock: row.minimum_stock ?? row.minimumStock ?? 0,
+    maximumStock: row.maximum_stock ?? row.maximumStock ?? 0,
+    averageCost:  row.average_cost  ?? row.averageCost  ?? 0,
+    salePrice:    row.sale_price    ?? row.salePrice    ?? 0
+  }));
+  const movements = rawMovements.map((row) => ({
+    ...row,
+    partName:      row.part_name      ?? row.partName      ?? "",
+    actorName:     row.actor_name     ?? row.actorName     ?? "",
+    previousStock: row.previous_stock ?? row.previousStock ?? 0,
+    nextStock:     row.next_stock     ?? row.nextStock     ?? 0,
+    createdAt:     row.created_at     ?? row.createdAt
+  }));
   const [search, setSearch] = useState("");
   const [stockFilter, setStockFilter] = useState("all");
   const debounced = useDebouncedValue(search);
@@ -145,7 +160,7 @@ export function PartsPage() {
         partName: part?.name || "",
         quantity: Number(movementForm.quantity || 0),
         unitCost: Number(movementForm.unitCost || 0)
-      }, user);
+      }, user, workshopId);
       showToast("Movimiento registrado correctamente.");
       setMovementModal(false);
     } catch (error) {

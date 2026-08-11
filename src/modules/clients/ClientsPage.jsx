@@ -1,5 +1,4 @@
-import { useMemo, useState } from "react";
-import { orderBy } from "firebase/firestore";
+import { useState } from "react";
 import { Button } from "../../components/common/Button";
 import { DataTable } from "../../components/common/DataTable";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -8,10 +7,10 @@ import { Modal } from "../../components/common/Modal";
 import { PageHeader } from "../../components/common/PageHeader";
 import { SectionCard } from "../../components/common/SectionCard";
 import { Badge } from "../../components/common/Badge";
-import { useCollection } from "../../hooks/useCollection";
+import { useSupabaseCollection } from "../../hooks/useSupabaseCollection";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useClients, useClientMutations, useVehicles, useVehicleMutations } from "../../services/clients.service";
-import { ordersRef } from "../../services/orders.service";
+import { useAuth } from "../../contexts/AuthContext";
 import { validateClient } from "../../lib/validators";
 import { formatMoney } from "../../lib/formatters";
 import { useToast } from "../../contexts/ToastContext";
@@ -54,8 +53,12 @@ export function ClientsPage() {
   const clientMutations = useClientMutations();
   const vehicleMutations = useVehicleMutations();
 
-  const orderCollection = useMemo(() => ordersRef(), []);
-  const { data: orders } = useCollection(orderCollection, orderBy("createdAt", "desc"));
+  const { workshopId } = useAuth();
+  const { data: rawOrders } = useSupabaseCollection("orders", workshopId, {
+    orderBy: { column: "created_at", ascending: false }
+  });
+  // Normalizar client_id (snake_case de Supabase) a clientId (camelCase)
+  const orders = rawOrders.map((row) => ({ ...row, clientId: row.client_id, totals: row.totals || {} }));
 
   const [clientModal, setClientModal] = useState(false);
   const [vehicleModal, setVehicleModal] = useState(false);

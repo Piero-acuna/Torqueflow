@@ -18,6 +18,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE mechanics;
 ALTER PUBLICATION supabase_realtime ADD TABLE services;
 ALTER PUBLICATION supabase_realtime ADD TABLE members;
 ALTER PUBLICATION supabase_realtime ADD TABLE service_categories;
+ALTER PUBLICATION supabase_realtime ADD TABLE stock_movements;
 
 -- Verificar qué tablas tienen Realtime activo (opcional)
 -- SELECT schemaname, tablename
