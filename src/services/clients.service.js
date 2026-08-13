@@ -48,7 +48,7 @@ export function useClientMutations() {
     onSuccess: invalidate
   });
   const deactivate = useMutation({
-    mutationFn: (id) => apiRequest(`/api/clients/${id}`, { method: "DELETE", params: { workshopId } }),
+    mutationFn: (id) => apiRequest(`/api/clients/${id}`, { method: "DELETE", body: { workshopId } }),
     onSuccess: invalidate
   });
 
@@ -69,7 +69,7 @@ export function useVehicleMutations() {
     onSuccess: invalidate
   });
   const deactivate = useMutation({
-    mutationFn: (id) => apiRequest(`/api/vehicles/${id}`, { method: "DELETE", params: { workshopId } }),
+    mutationFn: (id) => apiRequest(`/api/vehicles/${id}`, { method: "DELETE", body: { workshopId } }),
     onSuccess: invalidate
   });
 
