@@ -52,15 +52,32 @@ export function SettingsPage() {
   const { data: mechanics }   = useSupabaseCollection("mechanics",          workshopId, { orderBy: { column: "name", ascending: true } });
   const { data: categories }  = useSupabaseCollection("service_categories", workshopId, { orderBy: { column: "name", ascending: true } });
   const { data: services }    = useSupabaseCollection("services",           workshopId, { orderBy: { column: "name", ascending: true } });
-  const { data: rawMembers }  = useSupabaseCollection("members",            workshopId, { orderBy: { column: "display_name", ascending: true } });
-  const members = rawMembers.map((m) => ({
-    id:          m.id,
-    uid:         m.uid,
-    email:       m.email,
-    displayName: m.display_name,
-    role:        m.role,
-    active:      m.active
-  }));
+
+  // "members" NO se puede leer con el cliente anon (RLS sin política de
+  // lectura, a propósito). Por eso no usa useSupabaseCollection como el
+  // resto: se pide vía /api/admin/users, que usa service_role del lado
+  // del servidor. loadMembers() se llama al montar y otra vez luego de
+  // crear/editar un usuario para refrescar la lista.
+  const [members, setMembers] = useState([]);
+
+  async function loadMembers() {
+    if (!workshopId) return;
+    try {
+      const rawMembers = await usersService.list(workshopId);
+      setMembers(rawMembers.map((m) => ({
+        id:          m.id,
+        uid:         m.uid,
+        email:       m.email,
+        displayName: m.displayName,
+        role:        m.role,
+        active:      m.active
+      })));
+    } catch (error) {
+      showToast(error.message, "error");
+    }
+  }
+
+  useEffect(() => { loadMembers(); }, [workshopId]);
 
   function update(name, value) {
     setSettings((current) => ({ ...current, [name]: value }));
@@ -124,6 +141,7 @@ export function SettingsPage() {
       setUserForm({ email: "", password: "", displayName: "", role: "advisor" });
       setUserModal(false);
       showToast("Usuario creado correctamente.");
+      await loadMembers();
     } catch (error) { showToast(error.message, "error"); }
   }
 

@@ -1,22 +1,14 @@
-import { auth } from "../firebase/client";
+import { apiRequest } from "../lib/apiClient";
 
-async function request(method, body) {
-  const token = await auth.currentUser?.getIdToken();
-  const response = await fetch("/api/admin/users", {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify(body)
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || "No se pudo gestionar el usuario.");
-  return payload;
-}
-
+/**
+ * Los endpoints reales viven en /api/admin (vercel.json reescribe
+ * /api/admin/* -> /api/admin). Usamos apiRequest, igual que el resto de
+ * servicios, para que las peticiones GET manden workshopId por query string
+ * en vez de "body" (un GET con body no es válido y el navegador lo ignora).
+ */
 export const usersService = {
-  create:  (workshopId, payload) => request("POST",   { ...payload, workshopId }),
-  update:  (workshopId, payload) => request("PATCH",  { ...payload, workshopId }),
-  disable: (workshopId, payload) => request("DELETE", { ...payload, workshopId })
+  list:    (workshopId)          => apiRequest("/api/admin/users", { params: { workshopId } }).then((data) => data.members),
+  create:  (workshopId, payload) => apiRequest("/api/admin/users", { method: "POST",   body: { ...payload, workshopId } }),
+  update:  (workshopId, payload) => apiRequest("/api/admin/users", { method: "PATCH",  body: { ...payload, workshopId } }),
+  disable: (workshopId, payload) => apiRequest("/api/admin/users", { method: "DELETE", body: { ...payload, workshopId } })
 };

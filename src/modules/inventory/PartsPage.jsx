@@ -133,8 +133,8 @@ export function PartsPage() {
         salePrice: Number(partForm.salePrice || 0),
         ...(selected ? {} : { stock: 0 })
       };
-      if (selected) await partsService.update(selected.id, payload);
-      else await partsService.create(payload);
+      if (selected) await partsService.update(selected.id, payload, workshopId);
+      else await partsService.create(payload, workshopId);
       showToast(selected ? "Repuesto actualizado." : "Repuesto creado con stock inicial cero.");
       setPartModal(false);
     } catch (error) {
