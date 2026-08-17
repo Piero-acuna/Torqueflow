@@ -7,12 +7,12 @@ function getId(request) {
 }
 
 export default async function handler(request, response) {
-  const body = parseBody(request);
-  const workshopId = resolveWorkshopId(request, body);
-  const id = getId(request);
-  const method = request.method;
-
   try {
+    const body = parseBody(request);
+    const workshopId = resolveWorkshopId(request, body);
+    const id = getId(request);
+    const method = request.method;
+
     // ── /api/mechanics/:id ──────────────────────────────────────────────────
     if (id) {
       if (method === "PATCH") {

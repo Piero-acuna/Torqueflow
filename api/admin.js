@@ -1,13 +1,28 @@
 import { adminAuth } from "./_lib/firebase-admin.js";
 import { parseBody, requireAdmin, resolveWorkshopId, send } from "./_lib/firebase-admin.js";
-import { getSupabaseAdmin } from "./_lib/supabase-admin.js";
+import { getSupabaseAdmin, toMember } from "./_lib/supabase-admin.js";
 
 export default async function handler(request, response) {
-  const body = parseBody(request);
-  const workshopId = resolveWorkshopId(request, body);
-
   try {
+    const body = parseBody(request);
+    const workshopId = resolveWorkshopId(request, body);
     await requireAdmin(request, workshopId);
+
+    // ── GET /api/admin/users — lista los miembros del taller ────────────────
+    // members tiene RLS sin política de lectura anónima (a propósito, ver
+    // supabase/migrations/0001_clients_vehicles.sql), así que el panel NO
+    // puede leerlo con useSupabaseCollection/el cliente anon. Este endpoint
+    // usa service_role (ignora RLS) para exponer la lista de forma segura,
+    // ya requireAdmin verificó arriba que quien pregunta es admin del taller.
+    if (request.method === "GET") {
+      const { data, error } = await getSupabaseAdmin()
+        .from("members")
+        .select("*")
+        .eq("workshop_id", workshopId)
+        .order("display_name");
+      if (error) throw new Error(error.message);
+      return send(response, 200, { members: (data || []).map(toMember) });
+    }
 
     if (request.method === "POST") {
       const { email, password, displayName, role } = body;
@@ -55,7 +70,7 @@ export default async function handler(request, response) {
       return send(response, 200, { ok: true });
     }
 
-    response.setHeader("Allow", "POST, PATCH, DELETE");
+    response.setHeader("Allow", "GET, POST, PATCH, DELETE");
     return send(response, 405, { error: "Método no permitido." });
   } catch (error) {
     console.error(error);

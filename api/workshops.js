@@ -2,10 +2,10 @@ import { parseBody, requireAdmin, requireMember, resolveWorkshopId, send } from 
 import { getSupabaseAdmin, toWorkshop } from "./_lib/supabase-admin.js";
 
 export default async function handler(request, response) {
-  const body = parseBody(request);
-  const workshopId = resolveWorkshopId(request, body);
-
   try {
+    const body = parseBody(request);
+    const workshopId = resolveWorkshopId(request, body);
+
     if (request.method === "GET") {
       await requireMember(request, workshopId);
       const { data, error } = await getSupabaseAdmin()

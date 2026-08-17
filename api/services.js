@@ -7,13 +7,12 @@ function getId(request) {
 }
 
 export default async function handler(request, response) {
-  const body = parseBody(request);
-  const workshopId = resolveWorkshopId(request, body);
-  const id = getId(request);
-  const method = request.method;
-  const isCategory = body.isCategory === true;
-
   try {
+    const body = parseBody(request);
+    const workshopId = resolveWorkshopId(request, body);
+    const id = getId(request);
+    const method = request.method;
+    const isCategory = body.isCategory === true;
     const table = isCategory ? "service_categories" : "services";
 
     if (id) {

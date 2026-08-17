@@ -15,14 +15,13 @@ const MOVEMENT_DIRECTIONS = {
 };
 
 export default async function handler(request, response) {
-  if (request.method !== "POST") {
-    response.setHeader("Allow", "POST");
-    return send(response, 405, { error: "Método no permitido." });
-  }
-  const body = parseBody(request);
-  const workshopId = resolveWorkshopId(request, body);
-
   try {
+    if (request.method !== "POST") {
+      response.setHeader("Allow", "POST");
+      return send(response, 405, { error: "Método no permitido." });
+    }
+    const body = parseBody(request);
+    const workshopId = resolveWorkshopId(request, body);
     const actor = await requireOperator(request, workshopId);
     const { partId, type, quantity, unitCost, reference, supplier, notes, partName } = body;
     if (!partId || !type) return send(response, 400, { error: "partId y type son requeridos." });

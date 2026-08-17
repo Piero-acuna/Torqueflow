@@ -24,13 +24,13 @@ function getSegments(request) {
 }
 
 export default async function handler(request, response) {
-  const body = parseBody(request);
-  const workshopId = resolveWorkshopId(request, body);
-  const segments = getSegments(request);
-  const sub = segments[2]; // may be undefined | uuid | "parts" | "external" | "photos"
-  const method = request.method;
-
   try {
+    const body = parseBody(request);
+    const workshopId = resolveWorkshopId(request, body);
+    const segments = getSegments(request);
+    const sub = segments[2]; // may be undefined | uuid | "parts" | "external" | "photos"
+    const method = request.method;
+
     // ── /api/orders/parts ───────────────────────────────────────────────────
     if (sub === "parts") {
       if (method === "POST") {
