@@ -164,21 +164,50 @@ function toService(row) {
 function toPart(row) {
   if (!row) return null;
   return {
-    id:           row.id,
-    sku:          row.sku,
-    barcode:      row.barcode,
-    name:         row.name,
-    brand:        row.brand,
-    category:     row.category,
-    description:  row.description,
-    stock:        row.stock,
-    averageCost:  row.average_cost,
-    salePrice:    row.sale_price,
-    minimumStock: row.minimum_stock,
-    active:       row.active,
-    workshopId:   row.workshop_id,
-    createdAt:    row.created_at,
-    updatedAt:    row.updated_at
+    id:             row.id,
+    sku:            row.sku,
+    barcode:        row.barcode,
+    name:           row.name,
+    brand:          row.brand,
+    category:       row.category,
+    description:    row.description,
+    unit:           row.unit,
+    compatibility:  row.compatibility,
+    location:       row.location,
+    supplier:       row.supplier,
+    stock:          row.stock,
+    averageCost:    row.average_cost,
+    salePrice:      row.sale_price,
+    minimumStock:   row.minimum_stock,
+    maximumStock:   row.maximum_stock,
+    notes:          row.notes,
+    condition:      row.condition,
+    warrantyMonths: row.warranty_months,
+    active:         row.active,
+    workshopId:     row.workshop_id,
+    createdAt:      row.created_at,
+    updatedAt:      row.updated_at
+  };
+}
+
+function toPartTransit(row) {
+  if (!row) return null;
+  return {
+    id:            row.id,
+    workshopId:    row.workshop_id,
+    partId:        row.part_id,
+    partName:      row.part_name,
+    quantity:      row.quantity,
+    unitCost:      row.unit_cost,
+    supplier:      row.supplier,
+    reference:     row.reference,
+    expectedDate:  row.expected_date,
+    status:        row.status,
+    notes:         row.notes,
+    actorName:     row.actor_name,
+    receivedAt:    row.received_at,
+    createdAt:     row.created_at,
+    updatedAt:     row.updated_at
   };
 }
 
@@ -227,4 +256,4 @@ function toOrder(row) {
   };
 }
 
-export { toClient, toVehicle, toWorkshop, toMember, toMechanic, toService, toPart, toOrder, fail };
+export { toClient, toVehicle, toWorkshop, toMember, toMechanic, toService, toPart, toPartTransit, toOrder, fail };

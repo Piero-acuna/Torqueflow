@@ -2,16 +2,23 @@ import { parseBody, requireOperator, resolveWorkshopId, send } from "./_lib/fire
 import { getSupabaseAdmin } from "./_lib/supabase-admin.js";
 
 // direction: +1 = entrada (compra, ajuste+), -1 = salida (consumo, ajuste-)
+// Los valores reales que envía el formulario están en
+// src/config/constants.js -> STOCK_MOVEMENT_TYPES (purchase, order_use,
+// return, positive_adjustment, negative_adjustment). Se mantienen alias
+// alternativos por compatibilidad con integraciones externas.
 const MOVEMENT_DIRECTIONS = {
-  purchase:      1,
-  return:        1,
-  adjustment_in: 1,
-  adjustment_out: -1,
-  order_use:    -1,
-  order_return:  1,
-  waste:        -1,
-  transfer_in:   1,
-  transfer_out: -1
+  purchase:            1,
+  return:              1,
+  positive_adjustment: 1,
+  negative_adjustment: -1,
+  adjustment_in:       1,
+  adjustment_out:      -1,
+  order_use:           -1,
+  order_return:        1,
+  waste:                -1,
+  transfer_in:         1,
+  transfer_out:        -1,
+  transit_received:    1
 };
 
 export default async function handler(request, response) {
@@ -23,10 +30,11 @@ export default async function handler(request, response) {
     const body = parseBody(request);
     const workshopId = resolveWorkshopId(request, body);
     const actor = await requireOperator(request, workshopId);
-    const { partId, type, quantity, unitCost, reference, supplier, notes, partName } = body;
+    const { partId, type, quantity, unitCost, reference, supplier, notes } = body;
     if (!partId || !type) return send(response, 400, { error: "partId y type son requeridos." });
+    if (!(type in MOVEMENT_DIRECTIONS)) return send(response, 400, { error: `Tipo de movimiento desconocido: ${type}` });
 
-    const direction = MOVEMENT_DIRECTIONS[type] ?? 1;
+    const direction = MOVEMENT_DIRECTIONS[type];
 
     const { data, error } = await getSupabaseAdmin().rpc("register_stock_movement", {
       p_workshop_id: workshopId,

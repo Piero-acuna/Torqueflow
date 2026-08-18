@@ -31,6 +31,8 @@ export default async function handler(request, response) {
         if (body.averageCost  !== undefined) updates.average_cost  = Number(body.averageCost);
         if (body.salePrice    !== undefined) updates.sale_price    = Number(body.salePrice);
         if (body.notes        !== undefined) updates.notes         = body.notes;
+        if (body.condition    !== undefined) updates.condition     = body.condition;
+        if (body.warrantyMonths !== undefined) updates.warranty_months = Number(body.warrantyMonths);
         if (body.active       !== undefined) updates.active        = Boolean(body.active);
         if (!Object.keys(updates).length) return send(response, 400, { error: "Sin campos válidos." });
         const { data, error } = await getSupabaseAdmin().from("parts").update(updates).eq("id", id).eq("workshop_id", workshopId).select("*").single();
@@ -58,7 +60,7 @@ export default async function handler(request, response) {
     }
     if (method === "POST") {
       await requireAdmin(request, workshopId);
-      const { sku, barcode, name, brand, category, unit, compatibility, location, supplier, minimumStock, maximumStock, averageCost, salePrice, notes } = body;
+      const { sku, barcode, name, brand, category, unit, compatibility, location, supplier, minimumStock, maximumStock, averageCost, salePrice, notes, condition, warrantyMonths } = body;
       if (!name?.trim()) return send(response, 400, { error: "El nombre es obligatorio." });
       const { data, error } = await getSupabaseAdmin().from("parts").insert({
         workshop_id: workshopId, sku: sku || "", barcode: barcode || "",
@@ -67,6 +69,7 @@ export default async function handler(request, response) {
         location: location || "", supplier: supplier || "",
         minimum_stock: Number(minimumStock || 0), maximum_stock: Number(maximumStock || 0),
         average_cost: Number(averageCost || 0), sale_price: Number(salePrice || 0),
+        condition: condition || "nuevo", warranty_months: Number(warrantyMonths || 0),
         stock: 0, notes: notes || "", active: true
       }).select("*").single();
       if (error) throw Object.assign(new Error(error.message), { status: error.code === "23505" ? 409 : 502 });
