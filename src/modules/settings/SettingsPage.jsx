@@ -211,6 +211,18 @@ export function SettingsPage() {
                     <option value="allow">Permitir</option>
                   </Select>
                 </FormField>
+                <FormField label="Correo al cliente: pedido listo" hint="Requiere que el cliente tenga correo registrado.">
+                  <Select value={settings.notifyReady ? "yes" : "no"} onChange={(event) => update("notifyReady", event.target.value === "yes")}>
+                    <option value="yes">Enviar</option>
+                    <option value="no">No enviar</option>
+                  </Select>
+                </FormField>
+                <FormField label="Correo al cliente: pedido entregado" hint="Confirmación/recibo al marcar la orden como entregada.">
+                  <Select value={settings.notifyDelivered ? "yes" : "no"} onChange={(event) => update("notifyDelivered", event.target.value === "yes")}>
+                    <option value="yes">Enviar</option>
+                    <option value="no">No enviar</option>
+                  </Select>
+                </FormField>
               </div>
             </SectionCard>
           ) : null}

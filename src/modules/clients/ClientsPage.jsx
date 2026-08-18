@@ -9,7 +9,7 @@ import { SectionCard } from "../../components/common/SectionCard";
 import { Badge } from "../../components/common/Badge";
 import { useSupabaseCollection } from "../../hooks/useSupabaseCollection";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
-import { useClients, useClientMutations, useVehicles, useVehicleMutations } from "../../services/clients.service";
+import { useClients, useClientMutations, useVehicles, useVehicleMutations, useVinDecoder } from "../../services/clients.service";
 import { useAuth } from "../../contexts/AuthContext";
 import { validateClient } from "../../lib/validators";
 import { formatMoney } from "../../lib/formatters";
@@ -42,6 +42,20 @@ const EMPTY_VEHICLE = {
   notes: ""
 };
 
+// NHTSA vPIC devuelve el combustible en inglés; el selector del formulario
+// usa las opciones en español ya definidas en el proyecto.
+function mapFuelType(value) {
+  if (!value) return null;
+  const text = value.toLowerCase();
+  if (text.includes("diesel")) return "Diésel";
+  if (text.includes("electric")) return "Eléctrico";
+  if (text.includes("hybrid")) return "Híbrido";
+  if (text.includes("gasoline") || text.includes("flexible fuel")) return "Gasolina";
+  if (text.includes("natural gas") || text.includes("cng")) return "GNV";
+  if (text.includes("propane") || text.includes("lpg")) return "GLP";
+  return null; // Sin equivalente conocido: se conserva el valor actual del formulario.
+}
+
 export function ClientsPage() {
   const { workshop } = useWorkshop();
   const { showToast } = useToast();
@@ -52,6 +66,7 @@ export function ClientsPage() {
   const { data: vehicles = [] } = useVehicles();
   const clientMutations = useClientMutations();
   const vehicleMutations = useVehicleMutations();
+  const vinDecoder = useVinDecoder();
 
   const { workshopId } = useAuth();
   const { data: rawOrders } = useSupabaseCollection("orders", workshopId, {
@@ -117,6 +132,25 @@ export function ClientsPage() {
       setVehicleModal(false);
     } catch (mutationError) {
       showToast(mutationError.message, "error");
+    }
+  }
+
+  async function handleDecodeVin() {
+    const vin = vehicleForm.vin.trim().toUpperCase();
+    if (vin.length !== 17) return showToast("El VIN debe tener 17 caracteres.", "error");
+    try {
+      const decoded = await vinDecoder.mutateAsync(vin);
+      setVehicleForm((current) => ({
+        ...current,
+        vin,
+        brand: decoded.make || current.brand,
+        model: decoded.model || current.model,
+        year: decoded.modelYear || current.year,
+        fuelType: mapFuelType(decoded.fuelType) || current.fuelType
+      }));
+      showToast("VIN decodificado: se completaron marca, modelo y año.");
+    } catch (decodeError) {
+      showToast(decodeError.message, "error");
     }
   }
 
@@ -198,7 +232,12 @@ export function ClientsPage() {
           <FormField label="Año"><Input type="number" value={vehicleForm.year} onChange={(event) => setVehicleForm({ ...vehicleForm, year: event.target.value })} /></FormField>
           <FormField label="Color"><Input value={vehicleForm.color} onChange={(event) => setVehicleForm({ ...vehicleForm, color: event.target.value })} /></FormField>
           <FormField label="Combustible"><Select value={vehicleForm.fuelType} onChange={(event) => setVehicleForm({ ...vehicleForm, fuelType: event.target.value })}><option>Gasolina</option><option>Diésel</option><option>GLP</option><option>GNV</option><option>Híbrido</option><option>Eléctrico</option></Select></FormField>
-          <FormField label="VIN"><Input value={vehicleForm.vin} onChange={(event) => setVehicleForm({ ...vehicleForm, vin: event.target.value })} /></FormField>
+          <FormField label="VIN" className="field--wide" hint="17 caracteres. Decodifica para autocompletar marca, modelo, año y combustible (fuente: NHTSA vPIC, EE.UU.).">
+            <div className="row-actions">
+              <Input value={vehicleForm.vin} maxLength={17} onChange={(event) => setVehicleForm({ ...vehicleForm, vin: event.target.value.toUpperCase() })} />
+              <Button type="button" variant="secondary" onClick={handleDecodeVin} disabled={vinDecoder.isPending || vehicleForm.vin.trim().length !== 17}>{vinDecoder.isPending ? "Decodificando…" : "Decodificar"}</Button>
+            </div>
+          </FormField>
           <FormField label="Kilometraje"><Input type="number" min="0" value={vehicleForm.mileage} onChange={(event) => setVehicleForm({ ...vehicleForm, mileage: event.target.value })} /></FormField>
           <FormField label="Observaciones" className="field--wide"><Textarea rows="3" value={vehicleForm.notes} onChange={(event) => setVehicleForm({ ...vehicleForm, notes: event.target.value })} /></FormField>
         </form>

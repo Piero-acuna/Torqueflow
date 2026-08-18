@@ -61,5 +61,6 @@ export const EMPTY_WORKSHOP_SETTINGS = {
   requireApproval: true,
   preventNegativeStock: true,
   notifyReady: true,
-  notifyDelay: true
+  notifyDelay: true,
+  notifyDelivered: true
 };

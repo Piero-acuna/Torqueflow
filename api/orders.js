@@ -14,6 +14,7 @@
  */
 import { parseBody, requireMember, requireOperator, resolveWorkshopId, send } from "./_lib/firebase-admin.js";
 import { getSupabaseAdmin, toOrder } from "./_lib/supabase-admin.js";
+import { notifyOrderStatusChange } from "./_lib/notifications.js";
 
 function getSegments(request) {
   return new URL(request.url, "http://localhost").pathname
@@ -157,9 +158,24 @@ export default async function handler(request, response) {
           updates.totals = { ...t, labor, other, discount, total: (t.services || 0) + (t.parts || 0) + (t.external || 0) + Number(labor) + Number(other) - Number(discount) };
         }
 
+        // Para saber si el status REALMENTE cambió (y no reenviar el correo si
+        // guardan la orden de nuevo con el mismo status).
+        let previousStatus = null;
+        if (updates.status !== undefined) {
+          const { data: current } = await getSupabaseAdmin().from("orders").select("status").eq("id", orderId).maybeSingle();
+          previousStatus = current?.status || null;
+        }
+
         if (!Object.keys(updates).length) return send(response, 400, { error: "Sin campos válidos para actualizar." });
         const { data, error } = await getSupabaseAdmin().from("orders").update(updates).eq("id", orderId).eq("workshop_id", workshopId).select("*").single();
         if (error) throw new Error(error.message);
+
+        // Notificar al cliente por correo si el status cambió a un estado clave
+        // (listo / entregado). No bloquea la respuesta ni la revienta si falla.
+        if (updates.status !== undefined && updates.status !== previousStatus) {
+          notifyOrderStatusChange(workshopId, data).catch((err) => console.error("[orders] notifyOrderStatusChange:", err));
+        }
+
         return send(response, 200, { order: toOrder(data) });
       }
 

@@ -36,6 +36,7 @@ export default async function handler(request, response) {
       if (body.preventNegativeStock !== undefined) updates.prevent_negative_stock  = Boolean(body.preventNegativeStock);
       if (body.notifyReady          !== undefined) updates.notify_ready            = Boolean(body.notifyReady);
       if (body.notifyDelay          !== undefined) updates.notify_delay            = Boolean(body.notifyDelay);
+      if (body.notifyDelivered      !== undefined) updates.notify_delivered        = Boolean(body.notifyDelivered);
       if (body.terms                !== undefined) updates.terms                   = body.terms;
       if (body.documentFooter       !== undefined) updates.document_footer         = body.documentFooter;
 

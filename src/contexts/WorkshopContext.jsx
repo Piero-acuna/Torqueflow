@@ -76,6 +76,7 @@ function toWorkshop(row) {
     preventNegativeStock: row.prevent_negative_stock,
     notifyReady:          row.notify_ready,
     notifyDelay:          row.notify_delay,
+    notifyDelivered:      row.notify_delivered,
     active:               row.active,
     terms:                row.terms,
     documentFooter:       row.document_footer

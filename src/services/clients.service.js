@@ -75,3 +75,12 @@ export function useVehicleMutations() {
 
   return { create, update, deactivate };
 }
+
+// Decodificador de VIN (NHTSA vPIC, gratuito). Es una acción puntual —no un
+// dato que se cachee/suscriba— así que se expone como mutation en vez de query.
+export function useVinDecoder() {
+  const { workshopId } = useAuth();
+  return useMutation({
+    mutationFn: (vin) => apiRequest("/api/vin-decode", { params: { workshopId, vin } }).then((data) => data.decoded)
+  });
+}
