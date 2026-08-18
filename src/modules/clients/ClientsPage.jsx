@@ -69,12 +69,6 @@ export function ClientsPage() {
   const vinDecoder = useVinDecoder();
 
   const { workshopId } = useAuth();
-  const { data: rawOrders } = useSupabaseCollection("orders", workshopId, {
-    orderBy: { column: "created_at", ascending: false }
-  });
-  // Normalizar client_id (snake_case de Supabase) a clientId (camelCase)
-  const orders = rawOrders.map((row) => ({ ...row, clientId: row.client_id, totals: row.totals || {} }));
-
   const [clientModal, setClientModal] = useState(false);
   const [vehicleModal, setVehicleModal] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -82,10 +76,13 @@ export function ClientsPage() {
   const [vehicleForm, setVehicleForm] = useState(EMPTY_VEHICLE);
   const [errors, setErrors] = useState({});
 
-  const saving = clientMutations.create.isPending || clientMutations.update.isPending || vehicleMutations.create.isPending;
-
-  const selectedVehicles = selected ? vehicles.filter((vehicle) => vehicle.client?.id === selected.id) : [];
-  const selectedOrders = selected ? orders.filter((order) => order.clientId === selected.id) : [];
+  // Solo cargamos órdenes del cliente seleccionado, no de todo el taller
+  const { data: rawOrders } = useSupabaseCollection("orders", workshopId, {
+    filter:  selected ? { column: "client_id", value: selected.id } : undefined,
+    orderBy: { column: "created_at", ascending: false },
+    enabled: !!selected
+  });
+  const selectedOrders  = rawOrders.map((row) => ({ ...row, clientId: row.client_id, totals: row.totals || {} }));
   const selectedBilling = selectedOrders.reduce((sum, order) => sum + Number(order.totals?.total || 0), 0);
 
   function openCreate() {

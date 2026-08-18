@@ -1,5 +1,4 @@
 import { apiRequest } from "../lib/apiClient";
-import { useAuth } from "../contexts/AuthContext";
 
 /**
  * Guarda la configuración del taller (PATCH /api/workshops).

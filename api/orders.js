@@ -135,8 +135,10 @@ export default async function handler(request, response) {
         const updates = {};
         if (body.status            !== undefined) updates.status             = body.status;
         if (body.priority          !== undefined) updates.priority           = body.priority;
-        if (body.mechanicId        !== undefined) updates.mechanic_id        = body.mechanicId || null;
+        if (body.mechanicId        !== undefined) updates.mechanic_id        = body.mechanicId   || null;
         if (body.mechanicName      !== undefined) updates.mechanic_name      = body.mechanicName;
+        if (body.clientId          !== undefined) updates.client_id          = body.clientId     || null;
+        if (body.vehicleId         !== undefined) updates.vehicle_id         = body.vehicleId    || null;
         if (body.diagnosis         !== undefined) updates.diagnosis          = body.diagnosis;
         if (body.customerComplaint !== undefined) updates.customer_complaint = body.customerComplaint;
         if (body.internalNotes     !== undefined) updates.internal_notes     = body.internalNotes;
