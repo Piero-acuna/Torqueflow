@@ -12,7 +12,9 @@ export default async function handler(request, response) {
     const workshopId = resolveWorkshopId(request, body);
     const id = getId(request);
     const method = request.method;
-    const isCategory = body.isCategory === true;
+    const qs = new URL(request.url, "http://localhost").searchParams;
+    // isCategory puede venir en body (POST/PATCH) o en query string (DELETE)
+    const isCategory = body.isCategory === true || qs.get("isCategory") === "true";
     const table = isCategory ? "service_categories" : "services";
 
     if (id) {

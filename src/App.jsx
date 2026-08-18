@@ -12,7 +12,7 @@ import { ClientsPage } from "./modules/clients/ClientsPage";
 import { NewOrderPage } from "./modules/orders/NewOrderPage";
 import { OrdersPage } from "./modules/orders/OrdersPage";
 import { HistoryPage } from "./modules/history/HistoryPage";
-import InventorySystem from "./InventorySystem";
+import { PartsPage } from "./modules/inventory/PartsPage";
 import { SettingsPage } from "./modules/settings/SettingsPage";
 
 function ConfigMissing() {
@@ -22,7 +22,7 @@ function ConfigMissing() {
         <BrandLogo className="auth-card__brand" size="large" />
         <span className="eyebrow">Configuración requerida</span>
         <h2>La aplicación aún no está configurada</h2>
-        <p>Copia <code>.env.example</code> como <code>.env.local</code> y completa las variables de entorno requeridas.</p>
+        <p>Completa las variables de entorno requeridas en Vercel.</p>
       </section>
     </main>
   );
@@ -44,7 +44,7 @@ function RoutedApplication() {
     case "/orders/new": page = <NewOrderPage />; break;
     case "/orders": page = <OrdersPage />; break;
     case "/history": page = <HistoryPage />; break;
-    case "/parts": page = <InventorySystem />; break;
+    case "/parts": page = <PartsPage />; break;
     case "/clients": page = <ClientsPage />; break;
     case "/settings": page = <SettingsPage />; break;
     default: page = <DashboardPage />;
