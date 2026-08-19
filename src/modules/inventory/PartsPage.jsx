@@ -48,16 +48,6 @@ const EMPTY_MOVEMENT = {
   notes: ""
 };
 
-const EMPTY_TRANSIT = {
-  partId: "",
-  quantity: 1,
-  unitCost: 0,
-  supplier: "",
-  reference: "",
-  expectedDate: "",
-  notes: ""
-};
-
 function stockBadge(part) {
   const state = stockState(part);
   if (state === "out") return <Badge tone="danger">Agotado</Badge>;
@@ -84,9 +74,6 @@ export function PartsPage() {
   const { data: rawMovements } = useSupabaseCollection("stock_movements", workshopId, {
     orderBy: { column: "created_at", ascending: false }
   });
-  const { data: rawTransit } = useSupabaseCollection("part_transit", workshopId, {
-    orderBy: { column: "created_at", ascending: false }
-  });
 
   // Normalizar snake_case → camelCase para compatibilidad con helpers existentes
   const parts = rawParts.map((row) => ({
@@ -104,25 +91,15 @@ export function PartsPage() {
     nextStock:     row.next_stock     ?? row.nextStock     ?? 0,
     createdAt:     row.created_at     ?? row.createdAt
   }));
-  const transit = rawTransit.map((row) => ({
-    ...row,
-    partId:       row.part_id       ?? row.partId       ?? "",
-    partName:     row.part_name     ?? row.partName     ?? "",
-    unitCost:     row.unit_cost     ?? row.unitCost     ?? 0,
-    expectedDate: row.expected_date ?? row.expectedDate ?? "",
-    createdAt:    row.created_at    ?? row.createdAt
-  }));
-  const pendingTransit = transit.filter((item) => item.status === "in_transit");
+
   const [search, setSearch] = useState("");
   const [stockFilter, setStockFilter] = useState("all");
   const debounced = useDebouncedValue(search);
   const [partModal, setPartModal] = useState(false);
   const [movementModal, setMovementModal] = useState(false);
-  const [transitModal, setTransitModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [partForm, setPartForm] = useState(EMPTY_PART);
   const [movementForm, setMovementForm] = useState(EMPTY_MOVEMENT);
-  const [transitForm, setTransitForm] = useState(EMPTY_TRANSIT);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
@@ -202,51 +179,6 @@ export function PartsPage() {
     }
   }
 
-  function openTransit(part = null) {
-    setTransitForm({ ...EMPTY_TRANSIT, partId: part?.id || "", unitCost: Number(part?.averageCost || 0) });
-    setTransitModal(true);
-  }
-
-  async function saveTransit(event) {
-    event.preventDefault();
-    if (!transitForm.partId) return showToast("Selecciona un repuesto.", "error");
-    if (!(Number(transitForm.quantity) > 0)) return showToast("La cantidad debe ser mayor a cero.", "error");
-    setSaving(true);
-    try {
-      await partTransitService.create({
-        ...transitForm,
-        quantity: Number(transitForm.quantity || 0),
-        unitCost: Number(transitForm.unitCost || 0)
-      }, workshopId);
-      showToast("Envío registrado en tránsito.");
-      setTransitModal(false);
-    } catch (error) {
-      showToast(error.message, "error");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function receiveTransit(item) {
-    if (!window.confirm(`¿Confirmas que llegó "${item.partName}" (${item.quantity} ${parts.find((p) => p.id === item.partId)?.unit || "unidad"})? Se sumará al stock.`)) return;
-    try {
-      await partTransitService.receive(item.id, workshopId);
-      showToast("Repuesto recibido: stock actualizado.");
-    } catch (error) {
-      showToast(error.message, "error");
-    }
-  }
-
-  async function cancelTransit(item) {
-    if (!window.confirm(`¿Cancelar el envío en tránsito de "${item.partName}"? No se moverá el stock.`)) return;
-    try {
-      await partTransitService.cancel(item.id, workshopId);
-      showToast("Envío cancelado.");
-    } catch (error) {
-      showToast(error.message, "error");
-    }
-  }
-
   function exportCsv() {
     downloadCsv(
       "inventario-repuestos.csv",
@@ -277,39 +209,15 @@ export function PartsPage() {
     { key: "actorName", label: "Usuario" }
   ];
 
-  function transitStatusBadge(status) {
-    if (status === "received") return <Badge tone="success">Recibido</Badge>;
-    if (status === "cancelled") return <Badge tone="danger">Cancelado</Badge>;
-    return <Badge tone="warning">En tránsito</Badge>;
-  }
-
-  const transitColumns = [
-    { key: "partName", label: "Repuesto" },
-    { key: "quantity", label: "Cantidad", render: (row) => `${row.quantity} ${parts.find((p) => p.id === row.partId)?.unit || "unidad"}` },
-    { key: "cost", label: "Costo unitario", render: (row) => formatMoney(row.unitCost || 0, workshop.currency) },
-    { key: "supplier", label: "Proveedor" },
-    { key: "reference", label: "Referencia" },
-    { key: "expectedDate", label: "Llegada estimada", render: (row) => row.expectedDate ? formatDate(row.expectedDate) : "—" },
-    { key: "status", label: "Estado", render: (row) => transitStatusBadge(row.status) },
-    { key: "actions", label: "Acciones", render: (row) => row.status === "in_transit" ? (
-        <div className="row-actions">
-          <Button size="sm" type="button" onClick={(event) => { event.stopPropagation(); receiveTransit(row); }}>Recibir</Button>
-          <Button size="sm" variant="ghost" type="button" onClick={(event) => { event.stopPropagation(); cancelTransit(row); }}>Cancelar</Button>
-        </div>
-      ) : null
-    }
-  ];
-
   return (
     <>
-      <PageHeader eyebrow="Inventario y Kardex" title="Repuestos" description="Catálogo, existencias, compras, consumos, ajustes y trazabilidad." actions={<><Button variant="secondary" type="button" onClick={exportCsv} disabled={!filtered.length}>Exportar</Button><Button variant="secondary" type="button" onClick={() => openMovement()}>Registrar movimiento</Button><Button variant="secondary" type="button" onClick={() => openTransit()}>+ Repuesto en tránsito</Button><Button type="button" onClick={openCreate}>+ Nuevo repuesto</Button></>} />
+      <PageHeader eyebrow="Inventario y Kardex" title="Repuestos" description="Catálogo, existencias, compras, consumos, ajustes y trazabilidad." actions={<><Button variant="secondary" type="button" onClick={exportCsv} disabled={!filtered.length}>Exportar</Button><Button variant="secondary" type="button" onClick={() => openMovement()}>Registrar movimiento</Button><Button type="button" onClick={openCreate}>+ Nuevo repuesto</Button></>} />
 
       <div className="stats-grid stats-grid--compact">
         <div className="metric-strip"><span>Repuestos activos</span><strong>{activeParts.length}</strong></div>
         <div className="metric-strip"><span>Valor a costo</span><strong>{formatMoney(inventoryValue, workshop.currency)}</strong></div>
         <div className="metric-strip"><span>Potencial de venta</span><strong>{formatMoney(potentialSale, workshop.currency)}</strong></div>
         <div className="metric-strip"><span>Requieren reposición</span><strong>{lowCount}</strong></div>
-        <div className="metric-strip"><span>En tránsito</span><strong>{pendingTransit.length}</strong></div>
       </div>
 
       <div className="toolbar toolbar--wrap">
@@ -324,10 +232,6 @@ export function PartsPage() {
 
       <SectionCard title="Últimos movimientos" description="Kardex inmutable de entradas, salidas, devoluciones y ajustes.">
         {movements.length ? <DataTable columns={movementColumns} rows={movements.slice(0, 30)} /> : <EmptyState title="Kardex vacío" description="Los movimientos de inventario aparecerán aquí." />}
-      </SectionCard>
-
-      <SectionCard title="Repuestos en tránsito" description="Compras confirmadas al proveedor que aún no llegan al taller. Al recibirlos, se suma el stock y queda registrado en el Kardex.">
-        {transit.length ? <DataTable columns={transitColumns} rows={transit} /> : <EmptyState title="Nada en tránsito" description="Registra una compra en camino para hacerle seguimiento hasta que llegue." actionLabel="Registrar envío" onAction={() => openTransit()} />}
       </SectionCard>
 
       <Modal open={partModal} onClose={() => setPartModal(false)} title={selected ? "Editar repuesto" : "Nuevo repuesto"} subtitle="El stock inicial permanece en cero; regístralo mediante un movimiento." footer={<><Button variant="ghost" type="button" onClick={() => setPartModal(false)}>Cancelar</Button><Button type="submit" form="part-form" disabled={saving}>Guardar repuesto</Button></>}>
@@ -360,18 +264,6 @@ export function PartsPage() {
           <FormField label="Factura / referencia"><Input value={movementForm.reference} onChange={(event) => setMovementForm({ ...movementForm, reference: event.target.value })} /></FormField>
           <FormField label="Proveedor / responsable"><Input value={movementForm.supplier} onChange={(event) => setMovementForm({ ...movementForm, supplier: event.target.value })} /></FormField>
           <FormField label="Observaciones" className="field--wide"><Textarea rows="3" value={movementForm.notes} onChange={(event) => setMovementForm({ ...movementForm, notes: event.target.value })} /></FormField>
-        </form>
-      </Modal>
-
-      <Modal open={transitModal} onClose={() => setTransitModal(false)} title="Registrar repuesto en tránsito" subtitle="El stock no cambia todavía: se actualiza recién cuando marcas 'Recibir'." footer={<><Button variant="ghost" type="button" onClick={() => setTransitModal(false)}>Cancelar</Button><Button type="submit" form="transit-form" disabled={saving}>Registrar envío</Button></>}>
-        <form id="transit-form" className="form-grid" onSubmit={saveTransit}>
-          <FormField label="Repuesto" required className="field--wide"><Select value={transitForm.partId} onChange={(event) => { const part = parts.find((item) => item.id === event.target.value); setTransitForm({ ...transitForm, partId: event.target.value, unitCost: Number(part?.averageCost || 0) }); }}><option value="">Selecciona un repuesto</option>{activeParts.map((part) => <option key={part.id} value={part.id}>{part.sku} · {part.name} · stock {part.stock || 0}</option>)}</Select></FormField>
-          <FormField label="Cantidad"><Input type="number" min="1" step="1" value={transitForm.quantity} onChange={(event) => setTransitForm({ ...transitForm, quantity: event.target.value })} /></FormField>
-          <FormField label="Costo unitario"><Input type="number" min="0" step="0.01" value={transitForm.unitCost} onChange={(event) => setTransitForm({ ...transitForm, unitCost: event.target.value })} /></FormField>
-          <FormField label="Llegada estimada"><Input type="date" value={transitForm.expectedDate} onChange={(event) => setTransitForm({ ...transitForm, expectedDate: event.target.value })} /></FormField>
-          <FormField label="Proveedor"><Input value={transitForm.supplier} onChange={(event) => setTransitForm({ ...transitForm, supplier: event.target.value })} /></FormField>
-          <FormField label="N° de orden / factura / tracking"><Input value={transitForm.reference} onChange={(event) => setTransitForm({ ...transitForm, reference: event.target.value })} /></FormField>
-          <FormField label="Observaciones" className="field--wide"><Textarea rows="3" value={transitForm.notes} onChange={(event) => setTransitForm({ ...transitForm, notes: event.target.value })} /></FormField>
         </form>
       </Modal>
     </>

@@ -40,12 +40,6 @@ export const PART_CONDITIONS = [
   { value: "reacondicionado", label: "Reacondicionado" }
 ];
 
-export const TRANSIT_STATUS = [
-  { value: "in_transit", label: "En tránsito" },
-  { value: "received", label: "Recibido" },
-  { value: "cancelled", label: "Cancelado" }
-];
-
 export const EMPTY_WORKSHOP_SETTINGS = {
   businessName: "",
   legalName: "",
