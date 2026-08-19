@@ -10,8 +10,7 @@
  * la sub-ruta llega como la parte después del primer segmento.
  * Ej: /api/auth/register → req.url contiene "/api/auth/register"
  */
-import { adminAuth } from "./_lib/firebase-admin.js";
-import { parseBody, requireStaff, resolveWorkshopId, send } from "./_lib/firebase-admin.js";
+import { adminAuth, parseBody, requireStaff, resolveWorkshopId, send } from "./_lib/firebase-admin.js";
 import { getSupabaseAdmin, getUserRecord } from "./_lib/supabase-admin.js";
 
 function resolveAction(request) {

@@ -77,7 +77,8 @@ export default async function handler(request, response) {
         const job = { id: crypto.randomUUID(), provider: provider || "", description, sentAt: sentAt || null, returnedAt: returnedAt || null, cost: Number(cost || 0), status: status || "sent" };
         const externalJobs = [...(order.external_jobs || []), job];
         const externalTotal = externalJobs.reduce((sum, j) => sum + Number(j.cost || 0), 0);
-        const totals = { ...(order.totals || {}), external: externalTotal, total: (order.totals?.services || 0) + (order.totals?.parts || 0) + externalTotal + (order.totals?.labor || 0) };
+        const t = order.totals || {};
+        const totals = { ...t, external: externalTotal, total: Math.max(0, (t.services || 0) + (t.parts || 0) + externalTotal + (t.labor || 0) + (t.other || 0) - (t.discount || 0)) };
         const { error: updateError } = await supabase.from("orders").update({ external_jobs: externalJobs, totals }).eq("id", orderId).eq("workshop_id", workshopId);
         if (updateError) throw new Error(updateError.message);
         return send(response, 200, { job });
@@ -91,7 +92,8 @@ export default async function handler(request, response) {
         if (fetchError || !order) return send(response, 404, { error: "Orden no encontrada." });
         const externalJobs = (order.external_jobs || []).filter((j) => j.id !== jobId);
         const externalTotal = externalJobs.reduce((sum, j) => sum + Number(j.cost || 0), 0);
-        const totals = { ...(order.totals || {}), external: externalTotal, total: (order.totals?.services || 0) + (order.totals?.parts || 0) + externalTotal + (order.totals?.labor || 0) };
+        const t = order.totals || {};
+        const totals = { ...t, external: externalTotal, total: Math.max(0, (t.services || 0) + (t.parts || 0) + externalTotal + (t.labor || 0) + (t.other || 0) - (t.discount || 0)) };
         const { error: updateError } = await supabase.from("orders").update({ external_jobs: externalJobs, totals }).eq("id", orderId).eq("workshop_id", workshopId);
         if (updateError) throw new Error(updateError.message);
         return send(response, 200, { ok: true });
@@ -126,12 +128,6 @@ export default async function handler(request, response) {
 
       if (method === "PATCH") {
         await requireOperator(request, workshopId);
-        const allowed = [
-          "status", "priority", "mechanic_id", "mechanic_name", "diagnosis",
-          "customer_complaint", "internal_notes", "promised_at", "budget",
-          "labor_cost", "other_costs", "discount", "payment_status",
-          "approval_status", "completed_at"
-        ];
         const updates = {};
         if (body.status            !== undefined) updates.status             = body.status;
         if (body.priority          !== undefined) updates.priority           = body.priority;

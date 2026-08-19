@@ -25,7 +25,7 @@ export function getSupabaseAdmin() {
 
 /**
  * Resuelve uid -> workshopId desde la tabla users.
- * Usado por /api/auth/user.js para el bootstrap de sesión.
+ * Usado por /api/auth/user para el bootstrap de sesión.
  */
 export async function getUserRecord(uid) {
   const { data } = await supabase()
@@ -115,6 +115,7 @@ function toWorkshop(row) {
     preventNegativeStock: row.prevent_negative_stock,
     notifyReady:          row.notify_ready,
     notifyDelay:          row.notify_delay,
+    notifyDelivered:      row.notify_delivered,   // columna de migración 0007
     active:               row.active,
     terms:                row.terms,
     documentFooter:       row.document_footer
@@ -190,27 +191,6 @@ function toPart(row) {
   };
 }
 
-function toPartTransit(row) {
-  if (!row) return null;
-  return {
-    id:            row.id,
-    workshopId:    row.workshop_id,
-    partId:        row.part_id,
-    partName:      row.part_name,
-    quantity:      row.quantity,
-    unitCost:      row.unit_cost,
-    supplier:      row.supplier,
-    reference:     row.reference,
-    expectedDate:  row.expected_date,
-    status:        row.status,
-    notes:         row.notes,
-    actorName:     row.actor_name,
-    receivedAt:    row.received_at,
-    createdAt:     row.created_at,
-    updatedAt:     row.updated_at
-  };
-}
-
 function toOrder(row) {
   if (!row) return null;
   return {
@@ -256,4 +236,4 @@ function toOrder(row) {
   };
 }
 
-export { toClient, toVehicle, toWorkshop, toMember, toMechanic, toService, toPart, toPartTransit, toOrder, fail };
+export { toClient, toVehicle, toWorkshop, toMember, toMechanic, toService, toPart, toOrder, fail };
