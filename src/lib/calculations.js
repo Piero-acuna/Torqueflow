@@ -19,11 +19,11 @@ export function calculateOrderTotals(order = {}) {
 }
 
 export function stockState(part = {}) {
-  const stock = Number(part.stock || 0);
-  const minimum = Number(part.minimumStock || 0);
-  const maximum = Number(part.maximumStock || 0);
-  if (stock <= 0) return "out";
-  if (stock <= minimum) return "low";
-  if (maximum > 0 && stock > maximum) return "over";
+  const stock   = Number(part.stock || 0);
+  const minimum = Number(part.minimumStock || part.minimum_stock || 0);
+  const maximum = Number(part.maximumStock || part.maximum_stock || 0);
+  if (stock <= 0)                         return "out";
+  if (stock <= minimum)                   return "low";
+  if (maximum > 0 && stock > maximum)     return "over";
   return "ok";
 }

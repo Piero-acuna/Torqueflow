@@ -9,6 +9,7 @@
     { "source": "/api/vehicles/:path*",        "destination": "/api/vehicles" },
     { "source": "/api/workshops/:path*",       "destination": "/api/workshops" },
     { "source": "/api/stock-movements/:path*", "destination": "/api/stock-movements" },
+    { "source": "/api/vin-decode",             "destination": "/api/vin-decode" },
     { "source": "/api/admin/:path*",           "destination": "/api/admin" }
   ]
 }

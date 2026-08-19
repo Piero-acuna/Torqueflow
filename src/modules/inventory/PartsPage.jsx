@@ -15,7 +15,7 @@ import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { stockState } from "../../lib/calculations";
 import { formatDate, formatMoney, normalizeText } from "../../lib/formatters";
 import { validatePart } from "../../lib/validators";
-import { partsService, partTransitService, registerStockMovement } from "../../services/inventory.service";
+import { partsService, registerStockMovement } from "../../services/inventory.service";
 import { STOCK_MOVEMENT_TYPES, PART_CONDITIONS } from "../../config/constants";
 import { downloadCsv } from "../../utils/csv";
 
