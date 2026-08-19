@@ -75,6 +75,7 @@ export function ClientsPage() {
   const [clientForm, setClientForm] = useState(EMPTY_CLIENT);
   const [vehicleForm, setVehicleForm] = useState(EMPTY_VEHICLE);
   const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
 
   // Solo cargamos órdenes del cliente seleccionado, no de todo el taller
   const { data: rawOrders } = useSupabaseCollection("orders", workshopId, {
@@ -84,6 +85,7 @@ export function ClientsPage() {
   });
   const selectedOrders  = rawOrders.map((row) => ({ ...row, clientId: row.client_id, totals: row.totals || {} }));
   const selectedBilling = selectedOrders.reduce((sum, order) => sum + Number(order.totals?.total || 0), 0);
+  const selectedVehicles = vehicles.filter((v) => v.client?.id === selected?.id);
 
   function openCreate() {
     setSelected(null);
@@ -104,6 +106,7 @@ export function ClientsPage() {
     const nextErrors = validateClient(clientForm);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
+    setSaving(true);
     try {
       if (selected?.id) await clientMutations.update.mutateAsync({ id: selected.id, ...clientForm });
       else await clientMutations.create.mutateAsync(clientForm);
@@ -111,6 +114,8 @@ export function ClientsPage() {
       setClientModal(false);
     } catch (mutationError) {
       showToast(mutationError.message, "error");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -123,12 +128,15 @@ export function ClientsPage() {
   async function saveVehicle(event) {
     event.preventDefault();
     if (!vehicleForm.plate.trim()) return showToast("Ingresa la placa.", "error");
+    setSaving(true);
     try {
       await vehicleMutations.create.mutateAsync({ ...vehicleForm, clientId: selected.id, plate: vehicleForm.plate.toUpperCase() });
       showToast("Vehículo registrado.");
       setVehicleModal(false);
     } catch (mutationError) {
       showToast(mutationError.message, "error");
+    } finally {
+      setSaving(false);
     }
   }
 

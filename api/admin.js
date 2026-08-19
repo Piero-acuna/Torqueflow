@@ -1,5 +1,4 @@
-import { adminAuth } from "./_lib/firebase-admin.js";
-import { parseBody, requireAdmin, resolveWorkshopId, send } from "./_lib/firebase-admin.js";
+import { adminAuth, parseBody, requireAdmin, resolveWorkshopId, send } from "./_lib/firebase-admin.js";
 import { getSupabaseAdmin, toMember } from "./_lib/supabase-admin.js";
 
 export default async function handler(request, response) {
