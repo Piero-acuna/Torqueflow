@@ -41,7 +41,8 @@ export default async function handler(request, response) {
       if (!workshopName) return "El nombre del taller es obligatorio.";
       if (!ownerName)    return "Tu nombre es obligatorio.";
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "El correo no es válido.";
-      if (password.length < 8)  return "La contraseña debe tener al menos 8 caracteres.";
+      if (password.length < 8)   return "La contraseña debe tener al menos 8 caracteres.";
+      if (!/[0-9]/.test(password)) return "La contraseña debe contener al menos un número.";
       return null;
     }
 

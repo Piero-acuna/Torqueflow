@@ -1,5 +1,8 @@
 import { supabase } from "../lib/supabaseClient";
-import { useAuth } from "../contexts/AuthContext";
+
+// C5: solo imágenes de tipo conocido — bloquea .php, .htaccess, .exe, etc.
+const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
+const ALLOWED_MIME_TYPES  = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 /**
  * Sube fotos de recepción al bucket "order-photos" en Supabase Storage.
@@ -13,7 +16,23 @@ export async function uploadOrderPhotos(orderId, files = [], workshopId) {
   if (!workshopId) throw new Error("workshopId requerido para subir fotos.");
 
   const uploads = Array.from(files).map(async (file) => {
-    const extension = (file.name.split(".").pop() || "jpg").toLowerCase();
+    // C5: validar extensión
+    const extension = (file.name.split(".").pop() || "").toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(extension)) {
+      throw new Error(`Tipo de archivo no permitido: .${extension}. Solo se permiten JPG, PNG o WebP.`);
+    }
+
+    // C5: validar MIME type (segunda barrera — el OS puede mentir en la extensión)
+    if (!ALLOWED_MIME_TYPES.has(file.type)) {
+      throw new Error(`Tipo MIME no permitido: ${file.type}. Solo se permiten imágenes JPG, PNG o WebP.`);
+    }
+
+    // C5: limitar tamaño a 10 MB por foto
+    const MAX_BYTES = 10 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      throw new Error(`La imagen "${file.name}" supera el límite de 10 MB.`);
+    }
+
     const uniqueName = `${crypto.randomUUID()}.${extension}`;
     const path = `workshops/${workshopId}/orders/${orderId}/${uniqueName}`;
 

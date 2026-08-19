@@ -64,6 +64,10 @@ export function LoginPage() {
       setRegisterError("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
+    if (!/[0-9]/.test(registerForm.password)) {
+      setRegisterError("La contraseña debe contener al menos un número.");
+      return;
+    }
     setSubmitting(true);
     try {
       await register(registerForm);

@@ -1,18 +1,21 @@
 import { adminAuth, parseBody, requireAdmin, resolveWorkshopId, send } from "./_lib/firebase-admin.js";
 import { getSupabaseAdmin, toMember } from "./_lib/supabase-admin.js";
 
+// C1: whitelist estricta de roles — la DB ya tiene CHECK constraint, pero
+// validamos aquí también para evitar errores 500 con mensajes de Postgres
+// expuestos al cliente, y para tener un mensaje de error legible.
+const ALLOWED_ROLES = new Set(["admin", "advisor", "mechanic", "cashier"]);
+
 export default async function handler(request, response) {
   try {
     const body = parseBody(request);
     const workshopId = resolveWorkshopId(request, body);
-    await requireAdmin(request, workshopId);
+
+    // requireAdmin devuelve el actor (uid + role) del token verificado.
+    // Lo guardamos para las comprobaciones de C2 (anti-automodificación).
+    const actor = await requireAdmin(request, workshopId);
 
     // ── GET /api/admin/users — lista los miembros del taller ────────────────
-    // members tiene RLS sin política de lectura anónima (a propósito, ver
-    // supabase/migrations/0001_clients_vehicles.sql), así que el panel NO
-    // puede leerlo con useSupabaseCollection/el cliente anon. Este endpoint
-    // usa service_role (ignora RLS) para exponer la lista de forma segura,
-    // ya requireAdmin verificó arriba que quien pregunta es admin del taller.
     if (request.method === "GET") {
       const { data, error } = await getSupabaseAdmin()
         .from("members")
@@ -25,17 +28,33 @@ export default async function handler(request, response) {
 
     if (request.method === "POST") {
       const { email, password, displayName, role } = body;
-      if (!email || !password || !displayName) return send(response, 400, { error: "email, password y displayName son requeridos." });
+
+      // C4: validaciones de entrada antes de tocar Firebase / Supabase
+      if (!email || !displayName)
+        return send(response, 400, { error: "email y displayName son requeridos." });
+      if (!password || password.length < 8)
+        return send(response, 400, { error: "La contraseña debe tener al menos 8 caracteres." });
+      if (!/[0-9]/.test(password))
+        return send(response, 400, { error: "La contraseña debe contener al menos un número." });
+
+      // C1: solo roles válidos del sistema
+      const assignedRole = role || "advisor";
+      if (!ALLOWED_ROLES.has(assignedRole))
+        return send(response, 400, { error: `Rol no válido. Permitidos: ${[...ALLOWED_ROLES].join(", ")}.` });
 
       let createdUser = null;
       try {
-        try { await adminAuth().getUserByEmail(email); return send(response, 409, { error: "Ya existe una cuenta con ese correo." }); }
-        catch (lookupError) { if (lookupError.code !== "auth/user-not-found") throw lookupError; }
+        try {
+          await adminAuth().getUserByEmail(email);
+          return send(response, 409, { error: "Ya existe una cuenta con ese correo." });
+        } catch (lookupError) {
+          if (lookupError.code !== "auth/user-not-found") throw lookupError;
+        }
 
         createdUser = await adminAuth().createUser({ email, password, displayName, emailVerified: false, disabled: false });
         const supabase = getSupabaseAdmin();
         const [{ error: memberError }, { error: userError }] = await Promise.all([
-          supabase.from("members").insert({ workshop_id: workshopId, uid: createdUser.uid, email, display_name: displayName, role: role || "advisor", active: true }),
+          supabase.from("members").insert({ workshop_id: workshopId, uid: createdUser.uid, email, display_name: displayName, role: assignedRole, active: true }),
           supabase.from("users").insert({ uid: createdUser.uid, workshop_id: workshopId, email })
         ]);
         if (memberError) throw memberError;
@@ -50,6 +69,15 @@ export default async function handler(request, response) {
     if (request.method === "PATCH") {
       const { uid, displayName, role, active } = body;
       if (!uid) return send(response, 400, { error: "uid es requerido." });
+
+      // C2: un admin no puede modificar su propio rol ni desactivar su propia cuenta
+      if (uid === actor.uid)
+        return send(response, 403, { error: "No puedes modificar tu propio rol o estado de cuenta." });
+
+      // C1: si llega un rol, verificar que sea válido
+      if (role !== undefined && !ALLOWED_ROLES.has(role))
+        return send(response, 400, { error: `Rol no válido. Permitidos: ${[...ALLOWED_ROLES].join(", ")}.` });
+
       const updates = {};
       if (displayName !== undefined) updates.display_name = displayName;
       if (role        !== undefined) updates.role         = role;
@@ -65,6 +93,11 @@ export default async function handler(request, response) {
     if (request.method === "DELETE") {
       const { uid } = body;
       if (!uid) return send(response, 400, { error: "uid es requerido." });
+
+      // C2: un admin no puede desactivar su propia cuenta
+      if (uid === actor.uid)
+        return send(response, 403, { error: "No puedes desactivar tu propia cuenta." });
+
       await getSupabaseAdmin().from("members").update({ active: false }).eq("uid", uid).eq("workshop_id", workshopId);
       return send(response, 200, { ok: true });
     }

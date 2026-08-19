@@ -77,12 +77,16 @@ export function parseBody(request) {
     : (request.body || {});
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function resolveWorkshopId(request, body) {
   const fromQuery =
     typeof request.query?.workshopId === "string" ? request.query.workshopId : null;
   const workshopId = fromQuery || body?.workshopId;
   if (!workshopId)
     throw Object.assign(new Error("Falta el taller (workshopId)."), { status: 400 });
+  if (!UUID_RE.test(workshopId))
+    throw Object.assign(new Error("workshopId no es un identificador válido."), { status: 400 });
   return workshopId;
 }
 
