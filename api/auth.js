@@ -77,7 +77,7 @@ export default async function handler(request, response) {
           labor_hour_rate: 0, daily_goal: 0, order_prefix: "OT",
           next_order_number: 1, require_approval: true,
           prevent_negative_stock: true, notify_ready: true,
-          notify_delay: true, active: true, owner_uid: createdUser.uid
+          notify_delay: true, notify_delivered: true, active: true, owner_uid: createdUser.uid
         })
         .select("id").single();
 

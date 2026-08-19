@@ -153,7 +153,7 @@ export default async function handler(request, response) {
           const labor    = updates.labor_cost  ?? t.labor    ?? 0;
           const other    = updates.other_costs ?? t.other    ?? 0;
           const discount = updates.discount    ?? t.discount ?? 0;
-          updates.totals = { ...t, labor, other, discount, total: (t.services || 0) + (t.parts || 0) + (t.external || 0) + Number(labor) + Number(other) - Number(discount) };
+          updates.totals = { ...t, labor, other, discount, total: Math.max(0, (t.services || 0) + (t.parts || 0) + (t.external || 0) + Number(labor) + Number(other) - Number(discount)) };
         }
 
         // Para saber si el status REALMENTE cambió (y no reenviar el correo si
