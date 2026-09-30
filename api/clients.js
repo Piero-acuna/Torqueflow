@@ -51,7 +51,7 @@ export default async function handler(request, response) {
     if (method === "GET") {
       await requireMember(request, workshopId);
       const qs = new URL(request.url, "http://localhost").searchParams;
-      const search = qs.get("search") || "";
+      const search = (qs.get("search") || "").replace(/[%_,.()"'\\]/g, "");
       let query = getSupabaseAdmin().from("clients").select("*").eq("workshop_id", workshopId).eq("active", true).order("name");
       if (search) query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,document_number.ilike.%${search}%`);
       const { data, error } = await query;

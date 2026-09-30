@@ -15,7 +15,7 @@
     "check": "node scripts/check-structure.mjs",
     "bootstrap:owner": "node scripts/bootstrap-owner.mjs",
     "clear:data": "node scripts/clear-workshop-data.mjs",
-    "firebase:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage"
+    "firebase:rules": "echo 'Firestore ya no se usa. Las reglas de seguridad son RLS de Supabase.'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.2",
